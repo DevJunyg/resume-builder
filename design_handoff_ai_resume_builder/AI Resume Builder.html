@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>resumé.ai — AI 이력서 빌더</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+
+  <style>
+    /* === RESET === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body, #root { height: 100%; }
+    body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+
+    /* === DARK THEME === */
+    [data-theme="dark"] {
+      --bg: #08080e;
+      --surface: #0d0d1c;
+      --surface-2: #13132a;
+      --surface-3: #1c1c3a;
+      --border: rgba(99,102,241,0.11);
+      --border-hover: rgba(99,102,241,0.38);
+      --text: #e2e2f0;
+      --text-muted: #6464a0;
+      --text-subtle: #9898c8;
+      --accent: #6366f1;
+      --accent-2: #22d3ee;
+      --glow: 0 0 24px rgba(99,102,241,0.28);
+    }
+
+    /* === LIGHT THEME === */
+    [data-theme="light"] {
+      --bg: #f5f5ff;
+      --surface: #ffffff;
+      --surface-2: #f0f0fa;
+      --surface-3: #e6e6f4;
+      --border: rgba(99,102,241,0.1);
+      --border-hover: rgba(99,102,241,0.32);
+      --text: #0d0d1c;
+      --text-muted: #7878a8;
+      --text-subtle: #5050a0;
+      --accent: #4f46e5;
+      --accent-2: #0891b2;
+      --glow: 0 0 24px rgba(79,70,229,0.18);
+    }
+
+    /* === KEYFRAMES === */
+    @keyframes skeleton-pulse {
+      0%, 100% { opacity: 0.45; }
+      50% { opacity: 0.85; }
+    }
+    @keyframes blink-cursor {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+    @keyframes thinking-dot {
+      0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+      30% { transform: translateY(-4px); opacity: 1; }
+    }
+    @keyframes fade-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* === SKELETON === */
+    .skeleton {
+      animation: skeleton-pulse 1.6s ease-in-out infinite;
+    }
+
+    /* === STREAMING CURSOR === */
+    .stream-cursor {
+      display: inline-block;
+      margin-left: 1px;
+      animation: blink-cursor 0.8s step-end infinite;
+      color: var(--accent);
+      font-weight: 300;
+    }
+
+    /* === THINKING DOTS === */
+    .thinking-dots::after {
+      content: '';
+      display: inline-flex;
+      gap: 3px;
+    }
+    .thinking-dots {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+    }
+    .thinking-dots::before {
+      content: '●●●';
+      letter-spacing: 2px;
+      font-size: 8px;
+      animation: thinking-dot 1.2s ease infinite;
+      color: var(--text-muted);
+    }
+
+    /* === SCROLLBARS === */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+
+    /* === SELECTION === */
+    ::selection { background: rgba(99,102,241,0.25); }
+
+    /* === TRANSITIONS === */
+    [data-theme="dark"] *,
+    [data-theme="light"] * {
+      transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    }
+
+    textarea:focus { border-color: rgba(99,102,241,0.4) !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.1) !important; }
+    textarea { transition: border-color 0.15s, box-shadow 0.15s !important; }
+
+    /* === TWEAKS PANEL === */
+    #tweaks-panel {
+      display: none;
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      background: var(--surface);
+      border: 1px solid var(--border-hover);
+      border-radius: 16px;
+      padding: 20px;
+      width: 240px;
+      box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+    #tweaks-panel.visible { display: block; animation: fade-in 0.2s ease; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<!-- Component files -->
+<script type="text/babel" src="js/data.jsx"></script>
+<script type="text/babel" src="js/SharedComponents.jsx"></script>
+<script type="text/babel" src="js/LandingPage.jsx"></script>
+<script type="text/babel" src="js/BuilderPage.jsx"></script>
+
+<!-- App root -->
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "accentColor": "#6366f1",
+  "resumeFontSize": 14,
+  "darkNavOpacity": 0.7
+}/*EDITMODE-END*/;
+
+function App() {
+  const [view, setView] = React.useState(() => localStorage.getItem('rab_view') || 'landing');
+  const [theme, setTheme] = React.useState(() => localStorage.getItem('rab_theme') || 'dark');
+  const [tweaks, setTweaks] = React.useState(TWEAK_DEFAULTS);
+
+  React.useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('rab_theme', theme);
+  }, [theme]);
+
+  React.useEffect(() => {
+    localStorage.setItem('rab_view', view);
+  }, [view]);
+
+  const toggleTheme = () => setTheme(t => t === 'dark' ? 'light' : 'dark');
+
+  // Tweaks edit mode
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') {
+        document.getElementById('tweaks-panel')?.classList.add('visible');
+      } else if (e.data?.type === '__deactivate_edit_mode') {
+        document.getElementById('tweaks-panel')?.classList.remove('visible');
+      }
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  return (
+    <>
+      {view === 'landing'
+        ? <LandingPage onStart={() => setView('builder')} theme={theme} onThemeToggle={toggleTheme} />
+        : <BuilderPage theme={theme} onThemeToggle={toggleTheme} onBack={() => setView('landing')} />
+      }
+
+      {/* Tweaks panel */}
+      <div id="tweaks-panel">
+        <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>⚙</span> Tweaks
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>테마</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {['dark', 'light'].map(t => (
+              <button key={t} onClick={() => setTheme(t)} style={{
+                flex: 1, padding: '6px 0', borderRadius: 8, border: `1px solid ${theme === t ? 'rgba(99,102,241,0.5)' : 'var(--border)'}`,
+                background: theme === t ? 'rgba(99,102,241,0.15)' : 'var(--surface-2)',
+                color: theme === t ? '#818cf8' : 'var(--text-muted)', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', fontWeight: 600
+              }}>{t === 'dark' ? '🌙 다크' : '☀️ 라이트'}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>
+            이력서 폰트 크기: {tweaks.resumeFontSize}px
+          </label>
+          <input type="range" min={11} max={16} value={tweaks.resumeFontSize} onChange={e => {
+            const v = { ...tweaks, resumeFontSize: +e.target.value };
+            setTweaks(v);
+            window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { resumeFontSize: +e.target.value } }, '*');
+          }} style={{ width: '100%' }} />
+        </div>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: 6 }}>현재 화면</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {['landing', 'builder'].map(v => (
+              <button key={v} onClick={() => setView(v)} style={{
+                flex: 1, padding: '6px 0', borderRadius: 8, border: `1px solid ${view === v ? 'rgba(99,102,241,0.5)' : 'var(--border)'}`,
+                background: view === v ? 'rgba(99,102,241,0.15)' : 'var(--surface-2)',
+                color: view === v ? '#818cf8' : 'var(--text-muted)', cursor: 'pointer', fontSize: 12, fontFamily: 'inherit', fontWeight: 600
+              }}>{v === 'landing' ? '랜딩' : '빌더'}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
