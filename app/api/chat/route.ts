@@ -11,6 +11,14 @@ import { RESUME_SYSTEM_PROMPT } from "@/lib/claude/prompts";
 //   data: { error: string }    — 스트리밍 중 오류
 
 export async function POST(request: NextRequest) {
+  // API 키 미설정 시 즉시 에러 반환
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return Response.json(
+      { error: "CONFIGURATION_ERROR", message: "API 키가 설정되지 않았습니다" },
+      { status: 500 }
+    );
+  }
+
   let messages: Anthropic.MessageParam[];
 
   try {

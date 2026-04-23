@@ -11,10 +11,11 @@ import type { MobileTab } from "@/stores/ui-store";
 
 // 다크/라이트 모드 토글 버튼
 function ThemeToggle() {
-  const { theme, setTheme } = useTheme();
+  // resolvedTheme 사용 — "system" 테마일 때도 실제 적용된 테마를 정확히 반영
+  const { resolvedTheme, setTheme } = useTheme();
 
   const toggleTheme = () => {
-    setTheme(theme === "dark" ? "light" : "dark");
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
   };
 
   return (
@@ -22,9 +23,9 @@ function ThemeToggle() {
       type="button"
       onClick={toggleTheme}
       className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background text-foreground transition-all hover:bg-muted"
-      aria-label={theme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
+      aria-label={resolvedTheme === "dark" ? "라이트 모드로 전환" : "다크 모드로 전환"}
     >
-      {theme === "dark" ? (
+      {resolvedTheme === "dark" ? (
         <Sun className="h-4 w-4" aria-hidden="true" />
       ) : (
         <Moon className="h-4 w-4" aria-hidden="true" />

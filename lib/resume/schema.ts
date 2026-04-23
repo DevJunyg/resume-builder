@@ -2,14 +2,24 @@ import { z } from "zod";
 
 // ─── 기본 정보 ────────────────────────────────────────────────────────────────
 
+// javascript: 프로토콜 XSS 방어를 위해 http/https만 허용
+const safeUrlSchema = z
+  .string()
+  .url()
+  .refine((url) => /^https?:\/\//i.test(url), {
+    message: "http 또는 https URL만 허용됩니다",
+  })
+  .optional();
+
 export const PersonalInfoSchema = z.object({
   name: z.string(),
-  email: z.string().email(),
+  // 빈 문자열 초기값 허용 (createEmptyResume에서 email: "" 사용)
+  email: z.union([z.string().email(), z.literal("")]),
   phone: z.string().optional(),
   location: z.string().optional(),
-  website: z.string().url().optional(),
-  linkedin: z.string().url().optional(),
-  github: z.string().url().optional(),
+  website: safeUrlSchema,
+  linkedin: safeUrlSchema,
+  github: safeUrlSchema,
 });
 
 // ─── 간략 소개 ────────────────────────────────────────────────────────────────

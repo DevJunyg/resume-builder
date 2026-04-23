@@ -87,41 +87,20 @@ function EmptyState() {
   );
 }
 
-// 스켈레톤 로딩
-function SkeletonLoading() {
-  return (
-    <div className="flex flex-col gap-4 p-4" aria-label="로딩 중">
-      {[1, 2, 3].map((i) => (
-        <div key={i} className="flex gap-3">
-          <div className="h-8 w-8 flex-shrink-0 animate-pulse rounded-full bg-muted" />
-          <div className="flex flex-1 flex-col gap-2">
-            <div
-              className="h-4 animate-pulse rounded bg-muted"
-              style={{ width: `${40 + i * 15}%` }}
-            />
-            <div
-              className="h-4 animate-pulse rounded bg-muted"
-              style={{ width: `${25 + i * 10}%` }}
-            />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function ChatPanel() {
   const { messages, isStreaming, addMessage, appendToMessage, finishStreaming, getApiMessages } =
     useChatStore();
   const [input, setInput] = useState("");
-  const [isMounted, setIsMounted] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  // 언마운트 시 스트리밍 fetch 중단용 AbortController
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // 마운트 후 800ms 딜레이로 스켈레톤 해제
+  // 언마운트 시 진행 중인 스트리밍 정리
   useEffect(() => {
-    const timer = setTimeout(() => setIsMounted(true), 800);
-    return () => clearTimeout(timer);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, []);
 
   // 메시지 추가 시 자동 스크롤
@@ -146,8 +125,13 @@ export function ChatPanel() {
     async (content: string) => {
       if (!content.trim() || isStreaming) return;
 
+      const trimmed = content.trim();
+
+      // addMessage 전에 스냅샷 저장 — 중복 전송 방지
+      const priorMessages = getApiMessages();
+
       // 사용자 메시지 추가
-      addMessage({ role: "user", content: content.trim() });
+      addMessage({ role: "user", content: trimmed });
       setInput("");
 
       // 스트리밍 AI 메시지 placeholder 추가
@@ -158,17 +142,15 @@ export function ChatPanel() {
       });
 
       try {
-        const apiMessages = getApiMessages();
-        // 방금 추가한 사용자 메시지도 포함
-        const allMessages = [
-          ...apiMessages,
-          { role: "user" as const, content: content.trim() },
-        ];
+        abortControllerRef.current = new AbortController();
 
         const response = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: allMessages }),
+          signal: abortControllerRef.current.signal,
+          body: JSON.stringify({
+            messages: [...priorMessages, { role: "user" as const, content: trimmed }],
+          }),
         });
 
         if (!response.ok) {
@@ -195,8 +177,11 @@ export function ChatPanel() {
               const data = line.slice(6).trim();
               if (data === "[DONE]") continue;
               try {
-                const parsed = JSON.parse(data) as { text?: string };
-                if (parsed.text) {
+                const parsed = JSON.parse(data) as { text?: string; error?: string };
+                // SSE error 이벤트 처리
+                if (parsed.error) {
+                  appendToMessage(assistantId, `오류가 발생했습니다: ${parsed.error}`);
+                } else if (parsed.text) {
                   appendToMessage(assistantId, parsed.text);
                 }
               } catch {
@@ -206,6 +191,8 @@ export function ChatPanel() {
           }
         }
       } catch (err) {
+        // AbortError는 정상 취소이므로 무시
+        if (err instanceof Error && err.name === "AbortError") return;
         const errorMessage =
           err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다.";
         appendToMessage(assistantId, `\n\n오류: ${errorMessage}`);
@@ -258,9 +245,7 @@ export function ChatPanel() {
 
       {/* 메시지 목록 */}
       <div className="flex flex-1 flex-col overflow-y-auto" role="log" aria-live="polite" aria-label="채팅 메시지">
-        {!isMounted ? (
-          <SkeletonLoading />
-        ) : messages.length === 0 ? (
+        {messages.length === 0 ? (
           <EmptyState />
         ) : (
           <div className="flex flex-col gap-4 p-4">
@@ -289,7 +274,6 @@ export function ChatPanel() {
             rows={1}
             className="flex-1 resize-none rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
             style={{ minHeight: "48px", maxHeight: "160px" }}
-            aria-label="메시지 입력창"
           />
           <button
             type="submit"
