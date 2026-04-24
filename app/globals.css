@@ -3,75 +3,76 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ─── 라이트 테마 (기본) ─── */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --bg: #f5f5ff;
+  --surface: #ffffff;
+  --surface-2: #f0f0fa;
+  --surface-3: #e6e6f4;
+  --border: rgba(99, 102, 241, 0.1);
+  --text: #0d0d1c;
+  --text-muted: #7878a8;
+  --text-subtle: #5050a0;
+  --accent: #4f46e5;
+  --accent-2: #0891b2;
+  --gradient-accent: linear-gradient(135deg, #6366f1 0%, #22d3ee 100%);
+  --gradient-button: linear-gradient(135deg, #6366f1, #4f56e0);
+
+  /* shadcn 시맨틱 토큰 매핑 */
+  --background: #f5f5ff;
+  --foreground: #0d0d1c;
+  --card: #ffffff;
+  --card-foreground: #0d0d1c;
+  --popover: #ffffff;
+  --popover-foreground: #0d0d1c;
+  --primary: #4f46e5;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0fa;
+  --secondary-foreground: #0d0d1c;
+  --muted: #e6e6f4;
+  --muted-foreground: #7878a8;
+  --accent-color: #f0f0fa;
+  --accent-foreground: #0d0d1c;
   --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --destructive-foreground: #ffffff;
+  --border-color: rgba(99, 102, 241, 0.1);
+  --input: rgba(99, 102, 241, 0.1);
+  --ring: rgba(99, 102, 241, 0.4);
   --radius: 0.625rem;
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* ─── 다크 테마 ─── */
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  --bg: #08080e;
+  --surface: #0d0d1c;
+  --surface-2: #13132a;
+  --surface-3: #1c1c3a;
+  --border: rgba(99, 102, 241, 0.11);
+  --text: #e2e2f0;
+  --text-muted: #6464a0;
+  --text-subtle: #9898c8;
+  --accent: #6366f1;
+  --accent-2: #22d3ee;
+
+  --background: #08080e;
+  --foreground: #e2e2f0;
+  --card: #0d0d1c;
+  --card-foreground: #e2e2f0;
+  --popover: #0d0d1c;
+  --popover-foreground: #e2e2f0;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: #13132a;
+  --secondary-foreground: #e2e2f0;
+  --muted: #1c1c3a;
+  --muted-foreground: #6464a0;
+  --accent-color: #13132a;
+  --accent-foreground: #e2e2f0;
   --destructive: oklch(0.704 0.191 22.216);
-  --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --destructive-foreground: #ffffff;
+  --border-color: rgba(99, 102, 241, 0.11);
+  --input: rgba(99, 102, 241, 0.11);
+  --ring: rgba(99, 102, 241, 0.5);
 }
 
 @theme inline {
@@ -87,32 +88,90 @@
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
+  --color-accent: var(--accent-color);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
+  --color-border: var(--border-color);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* 커스텀 토큰 — Tailwind 유틸에서 bg-surface, text-text-muted 등으로 사용 */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-text: var(--text);
+  --color-text-muted: var(--text-muted);
+  --color-text-subtle: var(--text-subtle);
+  --color-accent-brand: var(--accent);
+  --color-accent-2: var(--accent-2);
+
   --radius-lg: var(--radius);
   --radius-md: calc(var(--radius) - 2px);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-xl: calc(var(--radius) + 4px);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+}
+
+/* ─── 애니메이션 keyframes ─── */
+@keyframes blink-cursor {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+@keyframes thinking-dot {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-6px); opacity: 1; }
+}
+
+@keyframes diff-yellow-hold {
+  from, to { background-color: rgba(253, 224, 71, 0.5); }
+}
+
+@keyframes diff-to-green {
+  from { background-color: rgba(253, 224, 71, 0.5); }
+  to { background-color: rgba(134, 239, 172, 0.4); }
+}
+
+@keyframes diff-fade-out {
+  from { background-color: rgba(134, 239, 172, 0.4); }
+  to { background-color: transparent; }
+}
+
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 0.9; }
+}
+
+/* ─── 유틸리티 클래스 ─── */
+@layer utilities {
+  .gradient-text {
+    background: var(--gradient-accent);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .gradient-button {
+    background: var(--gradient-button);
+  }
+
+  .streaming-cursor {
+    animation: blink-cursor 0.8s ease-in-out infinite;
+  }
+
+  .diff-new {
+    animation:
+      diff-yellow-hold 1.2s 0s linear forwards,
+      diff-to-green 0.4s 1.2s ease forwards,
+      diff-fade-out 0.6s 3s ease forwards;
+  }
+
+  .skeleton {
+    animation: skeleton-pulse 1.6s ease-in-out infinite;
+  }
 }
 
 @layer base {
@@ -121,5 +180,6 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   }
 }

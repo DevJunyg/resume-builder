@@ -1,5 +1,12 @@
 import Link from "next/link";
-import { ArrowRight, FileText, Sparkles, Download } from "lucide-react";
+import {
+  ArrowRight,
+  FileText,
+  Zap,
+  Target,
+  MessageSquare,
+} from "lucide-react";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 
 interface FeatureCardProps {
   icon: React.ReactNode;
@@ -7,15 +14,18 @@ interface FeatureCardProps {
   description: string;
 }
 
+// 기능 카드 — 호버 시 보더/배경 강조
 function FeatureCard({ icon, title, description }: FeatureCardProps) {
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+    <div className="group flex flex-col gap-4 rounded-xl border border-border bg-surface p-7 transition-all hover:border-accent-brand/30 hover:bg-surface-2">
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-3 text-accent-brand">
         {icon}
       </div>
       <div className="flex flex-col gap-2">
-        <h3 className="text-lg font-semibold text-card-foreground">{title}</h3>
-        <p className="text-sm leading-relaxed text-muted-foreground">
+        <h3 className="text-[15px] font-bold tracking-tight text-foreground">
+          {title}
+        </h3>
+        <p className="text-[13px] leading-[1.7] text-text-muted">
           {description}
         </p>
       </div>
@@ -23,81 +33,211 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
   );
 }
 
-export default function HomePage() {
+// 히어로 우측 브라우저 chrome 미니 프리뷰 — 순수 정적 데모
+function BrowserMockup() {
   return (
-    <div className="flex min-h-full flex-col bg-background">
-      {/* 헤더 */}
-      <header className="border-b border-border bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-6">
-          <FileText className="h-6 w-6 text-primary" aria-hidden="true" />
-          <span className="text-lg font-bold text-foreground">AI 이력서 빌더</span>
-        </div>
-      </header>
+    <div className="relative">
+      {/* 배경 Glow */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-10 bg-[radial-gradient(ellipse_at_50%_50%,rgba(99,102,241,0.18)_0%,transparent_70%)]"
+      />
 
-      <main className="flex-1">
-        {/* 히어로 섹션 */}
-        <section className="mx-auto flex max-w-4xl flex-col items-center gap-8 px-6 py-24 text-center">
-          <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary">
-            <Sparkles className="h-4 w-4" aria-hidden="true" />
-            <span>Claude AI 기반 이력서 작성 도구</span>
+      <div className="relative overflow-hidden rounded-2xl border border-border bg-surface shadow-[0_40px_80px_rgba(0,0,0,0.35),0_0_0_1px_rgba(99,102,241,0.1)]">
+        {/* 미니 헤더: traffic lights */}
+        <div className="flex items-center gap-2 border-b border-border bg-surface-2 px-4 py-3">
+          <span className="h-2 w-2 rounded-full bg-[#f87171]" />
+          <span className="h-2 w-2 rounded-full bg-[#fbbf24]" />
+          <span className="h-2 w-2 rounded-full bg-[#4ade80]" />
+          <span className="ml-2 font-mono text-xs text-text-muted">
+            resume.ai/builder
+          </span>
+        </div>
+
+        {/* 미니 빌더 프리뷰 */}
+        <div className="flex h-[380px]">
+          {/* 미니 채팅 */}
+          <div className="flex w-[200px] flex-col gap-3 border-r border-border p-4">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-muted">
+              AI Chat
+            </div>
+            <div className="rounded-lg bg-surface-2 p-2.5 text-xs leading-relaxed text-text-subtle">
+              자기소개를 더 임팩트있게 수정해줘
+            </div>
+            <div className="flex gap-1.5">
+              <div
+                className="h-6 w-6 flex-shrink-0 rounded-full gradient-button"
+                aria-hidden="true"
+              />
+              <div className="flex-1 rounded-lg bg-[rgba(99,102,241,0.12)] px-2.5 py-2 text-xs leading-relaxed text-foreground">
+                자기소개를 업데이트했어요! 비즈니스 임팩트를 강조했습니다.
+              </div>
+            </div>
           </div>
 
-          <h1 className="max-w-2xl text-5xl font-bold leading-tight tracking-tight text-foreground">
-            AI와 대화하며{" "}
-            <span className="text-primary">완성하는 이력서</span>
-          </h1>
+          {/* 미니 이력서 (흰 배경 고정) */}
+          <div className="flex-1 overflow-hidden bg-white p-4 text-[#1a1a2e]">
+            <div className="mb-1 text-base font-extrabold text-[#0d0d1a]">
+              김지현
+            </div>
+            <div className="mb-3 text-[11px] text-[#6868a0]">
+              jihyun@email.com · 010-1234-5678
+            </div>
+            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[#0d0d1a]">
+              자기소개
+            </div>
+            {/* diff-new 애니메이션 반복: animation-iteration-count infinite로 조정 */}
+            <div
+              className="rounded-sm px-1.5 py-1 text-xs leading-[1.6] text-[#2d2d4a]"
+              style={{
+                animation:
+                  "diff-yellow-hold 1.2s 0s linear infinite, diff-to-green 0.4s 1.2s ease infinite, diff-fade-out 0.6s 3s ease infinite",
+                animationDuration: "5s, 5s, 5s",
+                animationIterationCount: "infinite",
+              }}
+            >
+              5년 경력의 프론트엔드 엔지니어. React/TypeScript 기반의 복잡한 SaaS 제품을 처음부터 끝까지 주도하며...
+            </div>
+            <div className="mb-1.5 mt-3 text-[11px] font-bold uppercase tracking-[0.06em] text-[#0d0d1a]">
+              경력
+            </div>
+            <div className="rounded-r-md border-l-[3px] border-[#22d3ee] bg-[rgba(34,211,238,0.06)] pl-2">
+              <div className="text-xs font-bold text-[#0d0d1a]">
+                시니어 프론트엔드 개발자
+              </div>
+              <div className="text-[11px] text-[#6868a0]">
+                (주)테크스타트 · 2022–현재
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
-          <p className="max-w-xl text-xl leading-relaxed text-muted-foreground">
-            경험을 자연스럽게 이야기하면 AI가 STAR 기법으로 재구성합니다.
-            JD 분석부터 맞춤 최적화까지, 취업 준비의 모든 과정을 함께합니다.
-          </p>
-
+export default function HomePage() {
+  return (
+    <div className="min-h-full bg-background text-foreground">
+      {/* 고정 네비 */}
+      <nav className="fixed left-0 right-0 top-0 z-50 h-16 border-b border-border bg-background/80 backdrop-blur-md">
+        <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
           <Link
-            href="/builder"
-            className="flex items-center gap-2 rounded-full bg-primary px-8 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all hover:bg-primary/90 hover:shadow-xl active:scale-95"
+            href="/"
+            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            aria-label="홈"
           >
-            이력서 만들기 시작
-            <ArrowRight className="h-5 w-5" aria-hidden="true" />
+            <FileText
+              className="h-5 w-5 text-accent-brand"
+              aria-hidden="true"
+            />
+            <span className="text-[15px] font-bold tracking-tight">
+              AI 이력서 빌더
+            </span>
           </Link>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <Link
+              href="/builder"
+              className="flex items-center gap-1.5 rounded-lg gradient-button px-4 py-2 text-sm font-semibold text-white shadow-[0_4px_12px_rgba(99,102,241,0.3)] transition-all hover:shadow-[0_6px_20px_rgba(99,102,241,0.45)] active:scale-[0.98]"
+            >
+              시작하기
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </div>
+      </nav>
+
+      <main>
+        {/* 히어로 */}
+        <section className="mx-auto flex max-w-6xl items-center gap-16 px-6 pb-20 pt-32">
+          {/* 좌: 카피 */}
+          <div className="flex-shrink-0 basis-[520px]">
+            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent-brand/25 bg-accent-brand/5 px-3.5 py-1.5 text-[13px] font-medium text-accent-brand">
+              <span className="h-1.5 w-1.5 rounded-full bg-accent-brand" />
+              AI-Powered Resume Builder
+            </div>
+
+            <h1 className="mb-6 text-[58px] font-extrabold leading-[1.08] tracking-[-0.04em] text-foreground">
+              AI와 대화하며
+              <br />
+              <span className="gradient-text">완성하는 이력서</span>
+            </h1>
+
+            <p className="mb-10 max-w-[420px] text-[18px] leading-[1.7] text-text-muted">
+              자연어로 지시하면 AI가 즉시 수정합니다. 채용 공고를 넣으면 매칭 포인트를 강조하고, 모든 변경사항은 실시간 하이라이트로 확인하세요.
+            </p>
+
+            <div className="flex gap-3">
+              <Link
+                href="/builder"
+                className="flex items-center gap-2 rounded-lg gradient-button px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_20px_rgba(99,102,241,0.35)] transition-all hover:shadow-[0_8px_28px_rgba(99,102,241,0.5)] active:scale-[0.98]"
+              >
+                무료로 시작하기
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <button
+                type="button"
+                className="flex items-center gap-2 rounded-lg border border-border bg-transparent px-6 py-3.5 text-[15px] font-semibold text-foreground transition-all hover:border-accent-brand/30 hover:bg-surface-2"
+              >
+                데모 보기
+              </button>
+            </div>
+
+            <p className="mt-5 text-[13px] text-text-muted">
+              신용카드 불필요 · 5분 안에 완성
+            </p>
+          </div>
+
+          {/* 우: 브라우저 mockup */}
+          <div className="flex-1">
+            <BrowserMockup />
+          </div>
         </section>
 
-        {/* 기능 카드 섹션 */}
+        {/* Feature 섹션 */}
         <section
           className="mx-auto max-w-6xl px-6 pb-24"
           aria-label="주요 기능"
         >
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mb-14 text-center">
+            <h2 className="mb-3 text-[36px] font-extrabold tracking-[-0.03em] text-foreground">
+              킬러 <span className="gradient-text">피처</span>
+            </h2>
+            <p className="text-[16px] text-text-muted">
+              인터뷰어가 &ldquo;AI UX를 아는 개발자&rdquo;라고 느끼게 하는 차별화된 기능들
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
             <FeatureCard
-              icon={<Sparkles className="h-6 w-6" aria-hidden="true" />}
-              title="AI 경험 추출"
-              description="대화를 통해 경험을 입력하면 AI가 STAR(상황-과제-행동-결과) 기법으로 자동 재구성해 임팩트 있는 이력서를 만들어 드립니다."
+              icon={<Zap className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />}
+              title="스트리밍 Diff 하이라이트"
+              description="AI가 수정한 부분이 실시간으로 노란색→초록색으로 fade되며 강조됩니다."
             />
             <FeatureCard
-              icon={<FileText className="h-6 w-6" aria-hidden="true" />}
-              title="JD 맞춤 최적화"
-              description="지원하는 공고의 JD를 붙여넣으면 AI가 핵심 키워드를 분석하고 당신의 경험을 최적의 순서로 배치합니다."
+              icon={<Target className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />}
+              title="JD 매칭 분석"
+              description="채용 공고를 붙여넣으면 이력서에서 매칭되는 핵심 섹션을 자동으로 강조합니다."
             />
             <FeatureCard
-              icon={<Download className="h-6 w-6" aria-hidden="true" />}
-              title="즉시 내보내기"
-              description="완성된 이력서를 PDF 또는 Markdown 형식으로 즉시 내보낼 수 있습니다. 언제든지 수정하고 다시 다운로드하세요."
+              icon={<MessageSquare className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />}
+              title="대화형 편집"
+              description="원하는 방향을 자연어로 말하면 즉시 이력서가 수정됩니다."
             />
+          </div>
+
+          <div className="mt-16 text-center">
+            <Link
+              href="/builder"
+              className="inline-flex items-center gap-2 rounded-lg gradient-button px-7 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_20px_rgba(99,102,241,0.35)] transition-all hover:shadow-[0_8px_28px_rgba(99,102,241,0.5)] active:scale-[0.98]"
+            >
+              지금 이력서 만들기
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
           </div>
         </section>
       </main>
-
-      {/* 푸터 */}
-      <footer className="border-t border-border bg-muted/30">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <FileText className="h-4 w-4" aria-hidden="true" />
-            <span>AI 이력서 빌더</span>
-          </div>
-          <p className="text-sm text-muted-foreground">
-            Claude Sonnet으로 구동
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

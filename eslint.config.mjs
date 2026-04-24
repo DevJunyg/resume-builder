@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 디자인 핸드오프 프로토타입 — 프로덕션 코드 아님
+    "design_handoff_ai_resume_builder/**",
   ]),
 ]);
 

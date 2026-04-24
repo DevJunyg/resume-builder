@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sliders, FileDown, FileText } from "lucide-react";
+import { Search, FileDown, Clipboard } from "lucide-react";
 import { useResumeStore } from "@/stores/resume-store";
 import type { Tone } from "@/types/resume";
 
@@ -17,12 +17,17 @@ export function ToolsPanel() {
   const currentTone = resume.metadata.tone;
 
   const [jdInput, setJdInput] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
 
-  const handleAnalyzeJd = () => {
-    if (!jdInput.trim()) return;
+  const handleAnalyzeJd = async () => {
+    if (!jdInput.trim() || isAnalyzing) return;
+    setIsAnalyzing(true);
+    // 분석 시뮬레이션 (실제 API 연동 전)
+    await new Promise((r) => setTimeout(r, 1000));
     updateJd(jdInput.trim());
     setIsAnalyzed(true);
+    setIsAnalyzing(false);
   };
 
   const handleToneChange = (tone: Tone) => {
@@ -30,25 +35,20 @@ export function ToolsPanel() {
   };
 
   return (
-    <aside
-      className="flex h-full flex-col overflow-y-auto"
-      aria-label="도구 패널"
-    >
+    <aside className="flex h-full flex-col overflow-y-auto" aria-label="도구 패널">
       {/* 헤더 */}
-      <div className="border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <Sliders className="h-5 w-5 text-primary" aria-hidden="true" />
-          <h2 className="text-sm font-semibold text-foreground">도구</h2>
-        </div>
+      <div className="border-b border-border px-5 py-3.5">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
+          도구
+        </span>
       </div>
 
-      <div className="flex flex-col gap-6 p-4">
-        {/* JD 입력 */}
+      <div className="flex flex-col gap-5 p-5">
+        {/* JD 분석 */}
         <section aria-label="채용공고 분석">
-          <h3 className="mb-2 text-sm font-medium text-foreground">채용공고 (JD)</h3>
-          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-            지원하는 채용공고를 붙여넣으면 AI가 키워드를 분석하고 이력서를 최적화합니다.
-          </p>
+          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
+            JD 분석
+          </h3>
           <label htmlFor="jd-textarea" className="sr-only">
             채용공고 입력
           </label>
@@ -60,32 +60,40 @@ export function ToolsPanel() {
               setIsAnalyzed(false);
             }}
             placeholder="채용공고 내용을 붙여넣으세요..."
-            rows={6}
-            className="w-full resize-none rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            aria-label="채용공고 입력창"
+            rows={5}
+            className="w-full resize-y rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-[12px] text-foreground placeholder:text-text-muted focus:border-accent-brand/50 focus:outline-none focus:ring-2 focus:ring-accent-brand/30 transition-colors"
           />
           <button
             type="button"
             onClick={handleAnalyzeJd}
-            disabled={!jdInput.trim() || isAnalyzed}
-            className="mt-2 w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={!jdInput.trim() || isAnalyzing || isAnalyzed}
+            className="mt-2.5 flex w-full items-center justify-center gap-1.5 rounded-xl gradient-button px-4 py-2.5 text-[13px] font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             aria-label="JD 분석 시작"
           >
-            {isAnalyzed ? "분석 완료" : "JD 분석하기"}
+            {isAnalyzing ? (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-white/60" style={{ animation: "thinking-dot 1.2s ease 0ms infinite" }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-white/60" style={{ animation: "thinking-dot 1.2s ease 200ms infinite" }} />
+                <span className="h-1.5 w-1.5 rounded-full bg-white/60" style={{ animation: "thinking-dot 1.2s ease 400ms infinite" }} />
+                <span className="ml-1">분석 중...</span>
+              </>
+            ) : (
+              <>
+                <Search className="h-3.5 w-3.5" aria-hidden="true" />
+                {isAnalyzed ? "분석 완료" : "JD 매칭 분석"}
+              </>
+            )}
           </button>
-          {isAnalyzed && (
-            <p className="mt-2 text-center text-xs text-muted-foreground" role="status">
-              채용공고가 저장되었습니다.
-            </p>
-          )}
         </section>
+
+        {/* 구분선 */}
+        <div className="h-px bg-border" aria-hidden="true" />
 
         {/* 톤 선택 */}
         <section aria-label="이력서 톤 설정">
-          <h3 className="mb-2 text-sm font-medium text-foreground">이력서 톤</h3>
-          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-            이력서의 문체와 표현 방식을 선택하세요.
-          </p>
+          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
+            톤 설정
+          </h3>
           <div className="grid grid-cols-2 gap-2" role="group" aria-label="톤 선택">
             {TONE_OPTIONS.map((option) => {
               const isActive = currentTone === option.value;
@@ -95,15 +103,19 @@ export function ToolsPanel() {
                   type="button"
                   onClick={() => handleToneChange(option.value)}
                   aria-pressed={isActive}
-                  className={`flex flex-col gap-0.5 rounded-lg border px-3 py-2.5 text-left transition-all ${
+                  className={`flex flex-col gap-0.5 rounded-xl border px-3 py-2.5 text-left transition-all ${
                     isActive
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-background text-foreground hover:border-primary/50 hover:bg-muted/50"
+                      ? "border-accent-brand bg-accent-brand/10 shadow-[0_0_0_3px_rgba(99,102,241,0.18)] text-accent-brand"
+                      : "border-border bg-surface text-foreground hover:border-accent-brand/40 hover:bg-surface-2"
                   }`}
                 >
-                  <span className="text-xs font-medium">{option.label}</span>
                   <span
-                    className={`text-xs ${isActive ? "text-primary/70" : "text-muted-foreground"}`}
+                    className={`text-[12px] font-bold ${isActive ? "text-accent-brand" : "text-foreground"}`}
+                  >
+                    {option.label}
+                  </span>
+                  <span
+                    className={`text-[11px] ${isActive ? "text-accent-brand/70" : "text-text-muted"}`}
                   >
                     {option.description}
                   </span>
@@ -113,34 +125,40 @@ export function ToolsPanel() {
           </div>
         </section>
 
+        {/* 구분선 */}
+        <div className="h-px bg-border" aria-hidden="true" />
+
         {/* 내보내기 */}
         <section aria-label="이력서 내보내기">
-          <h3 className="mb-2 text-sm font-medium text-foreground">내보내기</h3>
-          <p className="mb-3 text-xs leading-relaxed text-muted-foreground">
-            완성된 이력서를 원하는 형식으로 내보냅니다.
-          </p>
+          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
+            내보내기
+          </h3>
           <div className="flex flex-col gap-2">
             <button
               type="button"
               disabled
-              className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2.5 text-sm text-muted-foreground cursor-not-allowed"
+              className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[12px] text-text-muted cursor-not-allowed opacity-50"
               aria-label="PDF 내보내기 (준비 중)"
               title="준비 중"
             >
-              <FileDown className="h-4 w-4" aria-hidden="true" />
+              <FileDown className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
               <span>PDF로 내보내기</span>
-              <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs">준비 중</span>
+              <span className="ml-auto rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-text-muted">
+                준비 중
+              </span>
             </button>
             <button
               type="button"
               disabled
-              className="flex items-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2.5 text-sm text-muted-foreground cursor-not-allowed"
+              className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[12px] text-text-muted cursor-not-allowed opacity-50"
               aria-label="Markdown 내보내기 (준비 중)"
               title="준비 중"
             >
-              <FileText className="h-4 w-4" aria-hidden="true" />
+              <Clipboard className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
               <span>Markdown으로 내보내기</span>
-              <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs">준비 중</span>
+              <span className="ml-auto rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-text-muted">
+                준비 중
+              </span>
             </button>
           </div>
         </section>
