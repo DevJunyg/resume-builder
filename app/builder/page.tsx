@@ -1,12 +1,14 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, MessageSquare, Eye, Wrench } from "lucide-react";
+import { ArrowLeft, MessageSquare, Eye, Wrench, Undo2, Redo2 } from "lucide-react";
 import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ResumePreview } from "@/components/preview/ResumePreview";
 import { ToolsPanel } from "@/components/tools/ToolsPanel";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useUiStore } from "@/stores/ui-store";
+import { useTemporalStore } from "@/stores/resume-store";
 import type { MobileTab } from "@/stores/ui-store";
 
 interface MobileTabItem {
@@ -23,6 +25,26 @@ const MOBILE_TABS: MobileTabItem[] = [
 
 export default function BuilderPage() {
   const { activeMobileTab, setActiveMobileTab } = useUiStore();
+  const { undo, redo, pastStates, futureStates } = useTemporalStore((s) => s);
+
+  const canUndo = pastStates.length > 0;
+  const canRedo = futureStates.length > 0;
+
+  // 키보드 단축키: Ctrl+Z (undo), Ctrl+Y / Ctrl+Shift+Z (redo)
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      if (e.key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        if (canUndo) undo();
+      } else if (e.key === "y" || (e.key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        if (canRedo) redo();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [canUndo, canRedo, undo, redo]);
 
   return (
     <div className="flex h-screen flex-col overflow-hidden bg-background">
@@ -37,7 +59,33 @@ export default function BuilderPage() {
             <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             <span className="text-[14px] font-semibold">AI 이력서 빌더</span>
           </Link>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            {/* Undo / Redo 버튼 */}
+            <div className="flex items-center gap-0.5">
+              <button
+                type="button"
+                onClick={() => undo()}
+                disabled={!canUndo}
+                aria-label="실행 취소 (Ctrl+Z)"
+                title="실행 취소"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <Undo2 className="h-4 w-4" aria-hidden="true" />
+              </button>
+              <button
+                type="button"
+                onClick={() => redo()}
+                disabled={!canRedo}
+                aria-label="다시 실행 (Ctrl+Y)"
+                title="다시 실행"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+              >
+                <Redo2 className="h-4 w-4" aria-hidden="true" />
+              </button>
+            </div>
+            <div className="h-4 w-px bg-border" aria-hidden="true" />
+            <ThemeToggle />
+          </div>
         </div>
       </header>
 

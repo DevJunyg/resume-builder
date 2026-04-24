@@ -3,7 +3,24 @@
 import { useResumeStore } from "@/stores/resume-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useDiffStore } from "@/stores/diff-store";
-import type { ExperienceEntry, Education, WorkItem } from "@/types/resume";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
+import type { ExperienceEntry, Education, WorkItem, ResumeSection, SectionType } from "@/types/resume";
 
 // 이력서 카드 내부는 항상 흰색 배경 — 고정 색상 사용 (테마 무관)
 const RESUME_COLORS = {
@@ -494,8 +511,85 @@ function SkillsSection() {
   );
 }
 
+// SectionType → 컴포넌트 매핑
+const SECTION_COMPONENTS: Partial<Record<SectionType, React.FC>> = {
+  personalInfo: PersonalInfoSection,
+  briefIntro: BriefIntroSection,
+  coreCompetencies: CoreCompetenciesSection,
+  experience: ExperienceSection,
+  education: EducationSection,
+  skills: SkillsSection,
+};
+
+// 드래그 핸들이 있는 정렬 가능한 섹션 래퍼
+function SortableSection({
+  section,
+  children,
+}: {
+  section: ResumeSection;
+  children: React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: section.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: "relative" as const,
+  };
+
+  // personalInfo 섹션은 드래그 핸들 미표시 (UX상 맨 위 고정)
+  const showHandle = section.type !== "personalInfo";
+
+  return (
+    <div ref={setNodeRef} style={style} className="group">
+      {showHandle && (
+        <div
+          {...attributes}
+          {...listeners}
+          className="absolute -left-6 top-1/2 -translate-y-1/2 hidden cursor-grab items-center justify-center group-hover:flex"
+          aria-label="섹션 이동"
+        >
+          <GripVertical className="h-4 w-4 text-[#c0c0d8]" aria-hidden="true" />
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
 export function ResumePreview() {
   const { isPreviewLoading } = useUiStore();
+  const resume = useResumeStore((s) => s.resume);
+  const reorderSections = useResumeStore((s) => s.reorderSections);
+
+  // sections를 order 순으로 정렬해 렌더 (isVisible 필터링)
+  const sortedSections = [...resume.sections]
+    .filter((s) => s.isVisible)
+    .sort((a, b) => a.order - b.order);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    const oldIndex = sortedSections.findIndex((s) => s.id === active.id);
+    const newIndex = sortedSections.findIndex((s) => s.id === over.id);
+    reorderSections(oldIndex, newIndex);
+  };
 
   return (
     // 외부 컨테이너: 테마 무관 고정 배경색 (종이 느낌)
@@ -515,14 +609,28 @@ export function ResumePreview() {
         {isPreviewLoading ? (
           <PreviewSkeleton />
         ) : (
-          <div className="flex flex-col gap-8 px-10 py-9">
-            <PersonalInfoSection />
-            <BriefIntroSection />
-            <CoreCompetenciesSection />
-            <ExperienceSection />
-            <EducationSection />
-            <SkillsSection />
-          </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={sortedSections.map((s) => s.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="group flex flex-col gap-8 px-10 py-9">
+                {sortedSections.map((section) => {
+                  const Component = SECTION_COMPONENTS[section.type];
+                  if (!Component) return null;
+                  return (
+                    <SortableSection key={section.id} section={section}>
+                      <Component />
+                    </SortableSection>
+                  );
+                })}
+              </div>
+            </SortableContext>
+          </DndContext>
         )}
       </div>
     </main>
