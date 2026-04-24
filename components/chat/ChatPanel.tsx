@@ -4,6 +4,16 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { Send } from "lucide-react";
 import { useChatStore } from "@/stores/chat-store";
 import type { ChatMessage } from "@/stores/chat-store";
+import { useResumeStore } from "@/stores/resume-store";
+import { useDiffStore } from "@/stores/diff-store";
+import type { CoreCompetency, StarHighlight } from "@/types/resume";
+
+// SSE 이벤트 유니온 타입
+type SseEvent =
+  | { text: string }
+  | { error: string }
+  | { type: "tool_call"; name: string; input: unknown }
+  | { type: "tool_done"; sections: string[] };
 
 // 스트리밍 커서: | 문자 blink 0.8s
 function StreamingCursor() {
@@ -140,6 +150,8 @@ function EmptyState({ onSend, disabled }: EmptyStateProps) {
 export function ChatPanel() {
   const { messages, isStreaming, addMessage, appendToMessage, finishStreaming, getApiMessages } =
     useChatStore();
+  const resumeStore = useResumeStore();
+  const { triggerDiff } = useDiffStore();
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -169,6 +181,39 @@ export function ChatPanel() {
   useEffect(() => {
     adjustTextareaHeight();
   }, [input, adjustTextareaHeight]);
+
+  // Tool 호출을 resume store에 적용
+  const applyToolCall = useCallback(
+    (name: string, input: unknown): void => {
+      const inp = input as Record<string, unknown>;
+      switch (name) {
+        case "update_brief_intro":
+          resumeStore.updateBriefIntro(inp.text as string, true);
+          break;
+        case "update_personal_info":
+          resumeStore.updatePersonalInfo(inp as Parameters<typeof resumeStore.updatePersonalInfo>[0]);
+          break;
+        case "update_core_competencies":
+          resumeStore.updateCoreCompetencies(inp.items as Array<CoreCompetency>);
+          break;
+        case "add_experience":
+          resumeStore.addExperience(
+            inp as unknown as Parameters<typeof resumeStore.addExperience>[0]
+          );
+          break;
+        case "update_experience_highlights":
+          resumeStore.updateExperienceHighlights(
+            inp.experienceId as string,
+            inp.highlights as Array<StarHighlight>
+          );
+          break;
+        default:
+          // 알 수 없는 tool 이름은 무시
+          break;
+      }
+    },
+    [resumeStore]
+  );
 
   // SSE 스트리밍으로 메시지 전송
   const sendMessage = useCallback(
@@ -224,11 +269,19 @@ export function ChatPanel() {
               const data = line.slice(6).trim();
               if (data === "[DONE]") continue;
               try {
-                const parsed = JSON.parse(data) as { text?: string; error?: string };
-                if (parsed.error) {
+                const parsed = JSON.parse(data) as SseEvent;
+                if ("error" in parsed) {
+                  // 기존 에러 처리
                   appendToMessage(assistantId, `오류가 발생했습니다: ${parsed.error}`);
-                } else if (parsed.text) {
+                } else if ("text" in parsed) {
+                  // 기존 텍스트 스트리밍 처리
                   appendToMessage(assistantId, parsed.text);
+                } else if (parsed.type === "tool_call") {
+                  // Tool 호출 처리 — resume store 업데이트
+                  applyToolCall(parsed.name, parsed.input);
+                } else if (parsed.type === "tool_done") {
+                  // Diff 하이라이트 트리거
+                  triggerDiff(parsed.sections);
                 }
               } catch {
                 // JSON 파싱 실패 무시
@@ -245,7 +298,7 @@ export function ChatPanel() {
         finishStreaming(assistantId);
       }
     },
-    [isStreaming, addMessage, appendToMessage, finishStreaming, getApiMessages]
+    [isStreaming, addMessage, appendToMessage, finishStreaming, getApiMessages, applyToolCall, triggerDiff]
   );
 
   const handleSubmit = useCallback(

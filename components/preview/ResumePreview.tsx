@@ -2,6 +2,7 @@
 
 import { useResumeStore } from "@/stores/resume-store";
 import { useUiStore } from "@/stores/ui-store";
+import { useDiffStore } from "@/stores/diff-store";
 import type { ExperienceEntry, Education, WorkItem } from "@/types/resume";
 
 // 이력서 카드 내부는 항상 흰색 배경 — 고정 색상 사용 (테마 무관)
@@ -92,18 +93,26 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
 // 기본 정보 섹션
 function PersonalInfoSection() {
   const { personalInfo } = useResumeStore((s) => s.resume);
+  const { diffs } = useDiffStore();
+  const phase = diffs["personal-info"];
   const hasInfo = personalInfo.name || personalInfo.email;
 
   if (!hasInfo) {
     return (
-      <div className="pb-6" style={{ borderBottom: `1px solid ${RESUME_COLORS.divider}` }}>
+      <div
+        className={`pb-6 ${phase ? "diff-new rounded-md" : ""}`}
+        style={{ borderBottom: `1px solid ${RESUME_COLORS.divider}` }}
+      >
         <EmptySection label="기본 정보" />
       </div>
     );
   }
 
   return (
-    <div className="pb-6" style={{ borderBottom: `1px solid ${RESUME_COLORS.divider}` }}>
+    <div
+      className={`pb-6 ${phase ? "diff-new rounded-md" : ""}`}
+      style={{ borderBottom: `1px solid ${RESUME_COLORS.divider}` }}
+    >
       {personalInfo.name && (
         <h1 className="text-[26px] font-extrabold tracking-[-0.03em]" style={{ color: RESUME_COLORS.name }}>
           {personalInfo.name}
@@ -157,9 +166,11 @@ function PersonalInfoSection() {
 // 간략 소개 섹션
 function BriefIntroSection() {
   const { briefIntro } = useResumeStore((s) => s.resume);
+  const { diffs } = useDiffStore();
+  const phase = diffs["brief-intro"];
 
   return (
-    <section aria-label="간략 소개">
+    <section aria-label="간략 소개" className={phase ? "diff-new rounded-md" : ""}>
       <SectionHeading>간략 소개</SectionHeading>
       {briefIntro?.text ? (
         <p className="text-[13px] leading-[1.75]" style={{ color: RESUME_COLORS.body }}>
@@ -175,10 +186,12 @@ function BriefIntroSection() {
 // 핵심역량 섹션
 function CoreCompetenciesSection() {
   const { coreCompetencies } = useResumeStore((s) => s.resume);
+  const { diffs } = useDiffStore();
+  const phase = diffs["core-competencies"];
   const items = coreCompetencies?.items ?? [];
 
   return (
-    <section aria-label="핵심역량">
+    <section aria-label="핵심역량" className={phase ? "diff-new rounded-md" : ""}>
       <SectionHeading>핵심역량</SectionHeading>
       {items.length > 0 ? (
         <div className="flex flex-wrap gap-2">
@@ -325,9 +338,11 @@ function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
 // 경력 섹션
 function ExperienceSection() {
   const { experience } = useResumeStore((s) => s.resume);
+  const { diffs } = useDiffStore();
+  const phase = diffs["experience"];
 
   return (
-    <section aria-label="경력">
+    <section aria-label="경력" className={phase ? "diff-new rounded-md" : ""}>
       <SectionHeading>경력</SectionHeading>
       {experience.length > 0 ? (
         <div className="flex flex-col gap-6">
