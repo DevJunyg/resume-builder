@@ -13,21 +13,47 @@ const TONE_OPTIONS: { value: Tone; label: string; description: string }[] = [
 ];
 
 export function ToolsPanel() {
-  const { resume, updateJd, updateTone } = useResumeStore();
+  const { resume, updateJdMetadata, updateTone } = useResumeStore();
   const currentTone = resume.metadata.tone;
 
   const [jdInput, setJdInput] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState<string | null>(null);
 
   const handleAnalyzeJd = async () => {
     if (!jdInput.trim() || isAnalyzing) return;
     setIsAnalyzing(true);
-    // 분석 시뮬레이션 (실제 API 연동 전)
-    await new Promise((r) => setTimeout(r, 1000));
-    updateJd(jdInput.trim());
-    setIsAnalyzed(true);
-    setIsAnalyzing(false);
+    setAnalyzeError(null);
+    try {
+      const res = await fetch("/api/analyze-jd", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jdText: jdInput.trim() }),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as {
+        keywords?: string[];
+        requiredSkills?: string[];
+        preferredSkills?: string[];
+        error?: string;
+      };
+      if (data.error) throw new Error(data.error);
+
+      // 풍부한 메타데이터로 업데이트
+      updateJdMetadata({
+        rawText: jdInput.trim(),
+        keywords: data.keywords ?? [],
+        requiredSkills: data.requiredSkills ?? [],
+        preferredSkills: data.preferredSkills ?? [],
+        analyzedAt: new Date().toISOString(),
+      });
+      setIsAnalyzed(true);
+    } catch (err) {
+      setAnalyzeError(err instanceof Error ? err.message : "분석 실패");
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
   const handleToneChange = (tone: Tone) => {
@@ -58,11 +84,17 @@ export function ToolsPanel() {
             onChange={(e) => {
               setJdInput(e.target.value);
               setIsAnalyzed(false);
+              setAnalyzeError(null);
             }}
             placeholder="채용공고 내용을 붙여넣으세요..."
             rows={5}
             className="w-full resize-y rounded-xl border border-border bg-surface-2 px-3 py-2.5 text-[12px] text-foreground placeholder:text-text-muted focus:border-accent-brand/50 focus:outline-none focus:ring-2 focus:ring-accent-brand/30 transition-colors"
           />
+          {analyzeError && (
+            <p className="text-[12px] text-red-400 mt-1" role="alert">
+              {analyzeError}
+            </p>
+          )}
           <button
             type="button"
             onClick={handleAnalyzeJd}
