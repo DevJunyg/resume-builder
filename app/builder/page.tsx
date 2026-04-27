@@ -53,11 +53,20 @@ export default function BuilderPage() {
         <div className="flex h-14 items-center justify-between px-4">
           <Link
             href="/"
-            className="flex items-center gap-2 text-foreground transition-opacity hover:opacity-70"
+            className="flex items-center gap-2 transition-opacity hover:opacity-70"
             aria-label="랜딩 페이지로 이동"
           >
-            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-            <span className="text-[14px] font-semibold">AI 이력서 빌더</span>
+            <ArrowLeft className="h-4 w-4 text-text-muted" aria-hidden="true" />
+            <div
+              className="flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-[5px] gradient-button text-white"
+              aria-hidden="true"
+              style={{ fontSize: 11 }}
+            >
+              ≡
+            </div>
+            <span className="text-[14px] font-extrabold tracking-[-0.03em] text-foreground">
+              resumé<span className="gradient-text">.ai</span>
+            </span>
           </Link>
           <div className="flex items-center gap-2">
             {/* Undo / Redo 버튼 */}
