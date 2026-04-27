@@ -4,6 +4,9 @@ import { anthropic, CLAUDE_MODEL, MAX_TOKENS } from "@/lib/claude/client";
 import { RESUME_SYSTEM_PROMPT } from "@/lib/claude/prompts";
 import { RESUME_TOOLS, TOOL_SECTION_MAP } from "@/lib/claude/tools";
 
+// Vercel 함수 최대 실행 시간 (스트리밍 대화용)
+export const maxDuration = 60;
+
 // POST /api/chat
 // Body: { messages: Anthropic.MessageParam[] }
 // Response: text/event-stream (SSE)

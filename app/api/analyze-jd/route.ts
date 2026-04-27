@@ -1,6 +1,8 @@
 import { type NextRequest } from "next/server";
 import { anthropic, CLAUDE_MODEL } from "@/lib/claude/client";
 
+export const maxDuration = 30;
+
 // JD 분석 결과 타입
 interface JdAnalysisResult {
   keywords: string[];
