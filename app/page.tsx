@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -14,6 +15,24 @@ interface FeatureCardProps {
   icon: React.ReactNode;
   title: string;
   description: string;
+}
+
+// resumé.ai 로고
+function Logo() {
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[6px] gradient-button text-white"
+        style={{ fontSize: 13, fontWeight: 700 }}
+        aria-hidden="true"
+      >
+        <FileText className="h-3.5 w-3.5" />
+      </div>
+      <span className="text-[15px] font-extrabold tracking-[-0.03em] text-foreground">
+        resumé<span className="gradient-text">.ai</span>
+      </span>
+    </div>
+  );
 }
 
 // 기능 카드 — 호버 시 보더/배경 강조
@@ -35,8 +54,38 @@ function FeatureCard({ icon, title, description }: FeatureCardProps) {
   );
 }
 
-// 히어로 우측 브라우저 chrome 미니 프리뷰 — 순수 정적 데모
+// 히어로 우측 브라우저 mockup — React state 기반 Diff 인터랙션
 function BrowserMockup() {
+  // 0=idle, 1=yellow(수정 중), 2=green(완료), 3=fade
+  const [phase, setPhase] = useState(0);
+
+  useEffect(() => {
+    const cycle = () => {
+      setPhase(1);
+      setTimeout(() => setPhase(2), 1200);
+      setTimeout(() => setPhase(3), 2800);
+      setTimeout(() => setPhase(0), 4000);
+    };
+    const initial = setTimeout(cycle, 1500);
+    const interval = setInterval(cycle, 5500);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, []);
+
+  const highlightStyle: React.CSSProperties = {
+    borderRadius: 3,
+    padding: "4px 6px",
+    transition: "background 0.6s ease",
+    background:
+      phase === 1
+        ? "rgba(234,179,8,0.35)"
+        : phase === 2
+          ? "rgba(34,197,94,0.25)"
+          : "transparent",
+  };
+
   return (
     <div className="relative">
       {/* 배경 Glow */}
@@ -52,7 +101,7 @@ function BrowserMockup() {
           <span className="h-2 w-2 rounded-full bg-[#fbbf24]" />
           <span className="h-2 w-2 rounded-full bg-[#4ade80]" />
           <span className="ml-2 font-mono text-xs text-text-muted">
-            resume.ai/builder
+            resumé.ai/builder
           </span>
         </div>
 
@@ -88,18 +137,31 @@ function BrowserMockup() {
             <div className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.06em] text-[#0d0d1a]">
               자기소개
             </div>
-            {/* diff-new 애니메이션 반복: animation-iteration-count infinite로 조정 */}
             <div
-              className="rounded-sm px-1.5 py-1 text-xs leading-[1.6] text-[#2d2d4a]"
-              style={{
-                animation:
-                  "diff-yellow-hold 1.2s 0s linear infinite, diff-to-green 0.4s 1.2s ease infinite, diff-fade-out 0.6s 3s ease infinite",
-                animationDuration: "5s, 5s, 5s",
-                animationIterationCount: "infinite",
-              }}
+              className="text-xs leading-[1.6] text-[#2d2d4a]"
+              style={highlightStyle}
             >
               5년 경력의 프론트엔드 엔지니어. React/TypeScript 기반의 복잡한 SaaS 제품을 처음부터 끝까지 주도하며...
             </div>
+
+            {/* Diff 배지 */}
+            {phase > 0 && phase < 3 && (
+              <div
+                className="mt-2.5 inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-medium"
+                style={{
+                  background:
+                    phase === 1
+                      ? "rgba(234,179,8,0.15)"
+                      : "rgba(34,197,94,0.12)",
+                  color: phase === 1 ? "#d97706" : "#16a34a",
+                  transition: "all 0.6s ease",
+                }}
+              >
+                <span>{phase === 1 ? "✏️" : "✓"}</span>
+                {phase === 1 ? "AI 수정 중..." : "AI가 수정했어요"}
+              </div>
+            )}
+
             <div className="mb-1.5 mt-3 text-[11px] font-bold uppercase tracking-[0.06em] text-[#0d0d1a]">
               경력
             </div>
@@ -126,16 +188,10 @@ export default function HomePage() {
         <div className="mx-auto flex h-full max-w-6xl items-center justify-between px-6">
           <Link
             href="/"
-            className="flex items-center gap-2 transition-opacity hover:opacity-80"
+            className="transition-opacity hover:opacity-80"
             aria-label="홈"
           >
-            <FileText
-              className="h-5 w-5 text-accent-brand"
-              aria-hidden="true"
-            />
-            <span className="text-[15px] font-bold tracking-tight">
-              AI 이력서 빌더
-            </span>
+            <Logo />
           </Link>
           <div className="flex items-center gap-3">
             <ThemeToggle />
