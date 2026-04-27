@@ -182,4 +182,61 @@
     @apply bg-background text-foreground;
     font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   }
+
+  /* 키보드 포커스 링 — 마우스 클릭 시는 숨김, 키보드 탐색 시만 표시 */
+  :focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.7);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* 버튼/링크 기본 포커스는 :focus-visible에 위임 */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
+/* ─── 인쇄 전용 스타일 (@media print) ─── */
+@media print {
+  /* 이력서 카드 영역 외 모든 UI 숨김 */
+  body > * { display: none !important; }
+  #resume-print-area { display: block !important; }
+
+  #resume-print-area {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: white;
+    box-shadow: none;
+    border-radius: 0;
+  }
+
+  /* 이력서 카드 인쇄 최적화 */
+  #resume-print-area .resume-card {
+    width: 100%;
+    max-width: 100%;
+    min-height: auto;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+
+  /* 섹션 잘림 방지 */
+  #resume-print-area section { page-break-inside: avoid; }
+
+  /* 링크 색상 유지 */
+  a { color: inherit !important; }
+
+  /* 드래그 핸들 숨김 */
+  [aria-label="섹션 이동"] { display: none !important; }
+
+  /* diff 하이라이트 애니메이션 제거 */
+  .diff-new { animation: none !important; background: transparent !important; }
+
+  @page {
+    size: A4;
+    margin: 15mm 20mm;
+  }
 }

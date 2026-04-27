@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Search, FileDown, Clipboard } from "lucide-react";
+import { Search, FileDown, Clipboard, Check } from "lucide-react";
 import { useResumeStore } from "@/stores/resume-store";
+import { resumeToMarkdown } from "@/lib/resume/to-markdown";
 import type { Tone } from "@/types/resume";
 
 const TONE_OPTIONS: { value: Tone; label: string; description: string }[] = [
@@ -20,6 +21,30 @@ export function ToolsPanel() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAnalyzed, setIsAnalyzed] = useState(false);
   const [analyzeError, setAnalyzeError] = useState<string | null>(null);
+  const [mdCopied, setMdCopied] = useState(false);
+
+  const handleExportPdf = () => {
+    window.print();
+  };
+
+  const handleExportMarkdown = async () => {
+    const md = resumeToMarkdown(resume);
+    try {
+      await navigator.clipboard.writeText(md);
+      setMdCopied(true);
+      setTimeout(() => setMdCopied(false), 2000);
+    } catch {
+      // clipboard API 실패 시 fallback: textarea 방식
+      const el = document.createElement("textarea");
+      el.value = md;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+      setMdCopied(true);
+      setTimeout(() => setMdCopied(false), 2000);
+    }
+  };
 
   const handleAnalyzeJd = async () => {
     if (!jdInput.trim() || isAnalyzing) return;
@@ -168,29 +193,25 @@ export function ToolsPanel() {
           <div className="flex flex-col gap-2">
             <button
               type="button"
-              disabled
-              className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[12px] text-text-muted cursor-not-allowed opacity-50"
-              aria-label="PDF 내보내기 (준비 중)"
-              title="준비 중"
+              onClick={handleExportPdf}
+              className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[12px] text-foreground transition-colors hover:border-accent-brand/40 hover:bg-surface-2"
+              aria-label="PDF로 내보내기"
             >
               <FileDown className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
               <span>PDF로 내보내기</span>
-              <span className="ml-auto rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-text-muted">
-                준비 중
-              </span>
             </button>
             <button
               type="button"
-              disabled
-              className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[12px] text-text-muted cursor-not-allowed opacity-50"
-              aria-label="Markdown 내보내기 (준비 중)"
-              title="준비 중"
+              onClick={handleExportMarkdown}
+              className="flex items-center gap-2 rounded-xl border border-border bg-surface px-3.5 py-2.5 text-[12px] text-foreground transition-colors hover:border-accent-brand/40 hover:bg-surface-2"
+              aria-label="Markdown 복사"
             >
-              <Clipboard className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-              <span>Markdown으로 내보내기</span>
-              <span className="ml-auto rounded-full bg-surface-2 px-2 py-0.5 text-[11px] text-text-muted">
-                준비 중
-              </span>
+              {mdCopied ? (
+                <Check className="h-3.5 w-3.5 flex-shrink-0 text-green-400" aria-hidden="true" />
+              ) : (
+                <Clipboard className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+              )}
+              <span>{mdCopied ? "복사 완료!" : "Markdown 복사"}</span>
             </button>
           </div>
         </section>
