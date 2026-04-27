@@ -1,6 +1,8 @@
 import { type NextRequest } from "next/server";
 import { anthropic, CLAUDE_MODEL } from "@/lib/claude/client";
 
+export const maxDuration = 30;
+
 // POST /api/rewrite
 // Body: { text: string; mode: "stronger" | "concise" | "star" }
 // Response: text/event-stream — data: { text: string } 청크, data: [DONE]
