@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -148,7 +150,7 @@ export default function HomePage() {
         </div>
       </nav>
 
-      <main>
+      <main id="main-content">
         {/* 히어로 */}
         <section className="mx-auto flex max-w-6xl items-center gap-16 px-6 pb-20 pt-32">
           {/* 좌: 카피 */}
@@ -178,9 +180,14 @@ export default function HomePage() {
               </Link>
               <button
                 type="button"
+                onClick={() =>
+                  document
+                    .getElementById("features")
+                    ?.scrollIntoView({ behavior: "smooth" })
+                }
                 className="flex items-center gap-2 rounded-lg border border-border bg-transparent px-6 py-3.5 text-[15px] font-semibold text-foreground transition-all hover:border-accent-brand/30 hover:bg-surface-2"
               >
-                데모 보기
+                기능 살펴보기
               </button>
             </div>
 
@@ -197,6 +204,7 @@ export default function HomePage() {
 
         {/* Feature 섹션 */}
         <section
+          id="features"
           className="mx-auto max-w-6xl px-6 pb-24"
           aria-label="주요 기능"
         >

@@ -90,7 +90,7 @@ export default function BuilderPage() {
       </header>
 
       {/* 데스크탑 3단 레이아웃 (md 이상) */}
-      <div className="hidden flex-1 overflow-hidden md:flex">
+      <div id="main-content" className="hidden flex-1 overflow-hidden md:flex">
         {/* 좌: 채팅 패널 340px */}
         <aside className="w-[340px] flex-shrink-0 overflow-hidden border-r border-border">
           <ChatPanel />

@@ -182,6 +182,18 @@
     @apply bg-background text-foreground;
     font-family: "Plus Jakarta Sans", system-ui, sans-serif;
   }
+
+  /* 키보드 포커스 링 — 마우스 클릭 시는 숨김, 키보드 탐색 시만 표시 */
+  :focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.7);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* 버튼/링크 기본 포커스는 :focus-visible에 위임 */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
 /* ─── 인쇄 전용 스타일 (@media print) ─── */
