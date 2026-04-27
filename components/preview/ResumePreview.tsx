@@ -1,8 +1,10 @@
 "use client";
 
+import { useRef } from "react";
 import { useResumeStore } from "@/stores/resume-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useDiffStore } from "@/stores/diff-store";
+import { TextRewriteMenu } from "./TextRewriteMenu";
 import {
   DndContext,
   closestCenter,
@@ -569,6 +571,7 @@ export function ResumePreview() {
   const { isPreviewLoading } = useUiStore();
   const resume = useResumeStore((s) => s.resume);
   const reorderSections = useResumeStore((s) => s.reorderSections);
+  const resumeCardRef = useRef<HTMLDivElement>(null);
 
   // sections를 order 순으로 정렬해 렌더 (isVisible 필터링)
   const sortedSections = [...resume.sections]
@@ -594,13 +597,33 @@ export function ResumePreview() {
   return (
     // 외부 컨테이너: 테마 무관 고정 배경색 (종이 느낌)
     <main
+      id="resume-print-area"
       className="flex flex-1 items-start justify-center overflow-y-auto p-8"
       style={{ background: "#e8e8f0" }}
       aria-label="이력서 미리보기"
     >
+      {/* 컨텍스트 메뉴: 이력서 카드 내 텍스트 선택 시 */}
+      <TextRewriteMenu
+        containerRef={resumeCardRef}
+        onRewrite={(_original, rewritten, range) => {
+          // 선택 범위의 텍스트를 재작성된 내용으로 교체
+          const selection = window.getSelection();
+          if (!selection) return;
+          selection.removeAllRanges();
+          selection.addRange(range);
+          const sel = window.getSelection();
+          if (!sel || sel.rangeCount === 0) return;
+          const r = sel.getRangeAt(0);
+          r.deleteContents();
+          r.insertNode(document.createTextNode(rewritten));
+          sel.removeAllRanges();
+        }}
+      />
+
       {/* 이력서 카드: 항상 흰색 — max-w 640px */}
       <div
-        className="w-full max-w-[640px] min-h-[900px] rounded-lg"
+        ref={resumeCardRef}
+        className="resume-card w-full max-w-[640px] min-h-[900px] rounded-lg"
         style={{
           background: "#ffffff",
           boxShadow: "0 8px 40px rgba(0,0,0,0.18)",
