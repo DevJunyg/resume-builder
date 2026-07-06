@@ -2,20 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  FileText,
-  Zap,
-  Target,
-  MessageSquare,
-} from "lucide-react";
+import { ArrowRight, FileText } from "lucide-react";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
-
-interface FeatureCardProps {
-  icon: React.ReactNode;
-  title: string;
-  description: string;
-}
 
 // resumé.ai 로고
 function Logo() {
@@ -31,25 +19,6 @@ function Logo() {
       <span className="text-[15px] font-extrabold tracking-[-0.03em] text-foreground">
         resumé<span className="gradient-text">.ai</span>
       </span>
-    </div>
-  );
-}
-
-// 기능 카드 — 호버 시 보더/배경 강조
-function FeatureCard({ icon, title, description }: FeatureCardProps) {
-  return (
-    <div className="group flex flex-col gap-4 rounded-xl border border-border bg-surface p-7 transition-all hover:border-accent-brand/30 hover:bg-surface-2">
-      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-3 text-accent-brand">
-        {icon}
-      </div>
-      <div className="flex flex-col gap-2">
-        <h3 className="text-[15px] font-bold tracking-tight text-foreground">
-          {title}
-        </h3>
-        <p className="text-[13px] leading-[1.7] text-text-muted">
-          {description}
-        </p>
-      </div>
     </div>
   );
 }
@@ -158,7 +127,7 @@ function BrowserMockup() {
                 }}
               >
                 <span>{phase === 1 ? "✏️" : "✓"}</span>
-                {phase === 1 ? "AI 수정 중..." : "AI가 수정했어요"}
+                {phase === 1 ? "수정 중..." : "수정했어요"}
               </div>
             )}
 
@@ -211,19 +180,14 @@ export default function HomePage() {
         <section className="mx-auto flex max-w-6xl items-center gap-16 px-6 pb-20 pt-32">
           {/* 좌: 카피 */}
           <div className="flex-shrink-0 basis-[520px]">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent-brand/25 bg-accent-brand/5 px-3.5 py-1.5 text-[13px] font-medium text-accent-brand">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent-brand" />
-              AI-Powered Resume Builder
-            </div>
-
             <h1 className="mb-6 text-[58px] font-extrabold leading-[1.08] tracking-[-0.04em] text-foreground">
-              AI와 대화하며
+              대화하며
               <br />
               <span className="gradient-text">완성하는 이력서</span>
             </h1>
 
             <p className="mb-10 max-w-[420px] text-[18px] leading-[1.7] text-text-muted">
-              자연어로 지시하면 AI가 즉시 수정합니다. 채용 공고를 넣으면 매칭 포인트를 강조하고, 모든 변경사항은 실시간 하이라이트로 확인하세요.
+              원하는 방향을 이야기하면 이력서에 바로 반영됩니다. 채용 공고를 넣으면 관련 경력을 맞춰 정리해 줍니다.
             </p>
 
             <div className="flex gap-3">
@@ -231,74 +195,15 @@ export default function HomePage() {
                 href="/builder"
                 className="flex items-center gap-2 rounded-lg gradient-button px-6 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_20px_rgba(99,102,241,0.35)] transition-all hover:shadow-[0_8px_28px_rgba(99,102,241,0.5)] active:scale-[0.98]"
               >
-                무료로 시작하기
+                이력서 만들기
                 <ArrowRight className="h-4 w-4" aria-hidden="true" />
               </Link>
-              <button
-                type="button"
-                onClick={() =>
-                  document
-                    .getElementById("features")
-                    ?.scrollIntoView({ behavior: "smooth" })
-                }
-                className="flex items-center gap-2 rounded-lg border border-border bg-transparent px-6 py-3.5 text-[15px] font-semibold text-foreground transition-all hover:border-accent-brand/30 hover:bg-surface-2"
-              >
-                기능 살펴보기
-              </button>
             </div>
-
-            <p className="mt-5 text-[13px] text-text-muted">
-              신용카드 불필요 · 5분 안에 완성
-            </p>
           </div>
 
           {/* 우: 브라우저 mockup */}
           <div className="flex-1">
             <BrowserMockup />
-          </div>
-        </section>
-
-        {/* Feature 섹션 */}
-        <section
-          id="features"
-          className="mx-auto max-w-6xl px-6 pb-24"
-          aria-label="주요 기능"
-        >
-          <div className="mb-14 text-center">
-            <h2 className="mb-3 text-[36px] font-extrabold tracking-[-0.03em] text-foreground">
-              킬러 <span className="gradient-text">피처</span>
-            </h2>
-            <p className="text-[16px] text-text-muted">
-              인터뷰어가 &ldquo;AI UX를 아는 개발자&rdquo;라고 느끼게 하는 차별화된 기능들
-            </p>
-          </div>
-
-          <div className="grid gap-6 md:grid-cols-3">
-            <FeatureCard
-              icon={<Zap className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />}
-              title="스트리밍 Diff 하이라이트"
-              description="AI가 수정한 부분이 실시간으로 노란색→초록색으로 fade되며 강조됩니다."
-            />
-            <FeatureCard
-              icon={<Target className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />}
-              title="JD 매칭 분석"
-              description="채용 공고를 붙여넣으면 이력서에서 매칭되는 핵심 섹션을 자동으로 강조합니다."
-            />
-            <FeatureCard
-              icon={<MessageSquare className="h-5 w-5" strokeWidth={1.8} aria-hidden="true" />}
-              title="대화형 편집"
-              description="원하는 방향을 자연어로 말하면 즉시 이력서가 수정됩니다."
-            />
-          </div>
-
-          <div className="mt-16 text-center">
-            <Link
-              href="/builder"
-              className="inline-flex items-center gap-2 rounded-lg gradient-button px-7 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_20px_rgba(99,102,241,0.35)] transition-all hover:shadow-[0_8px_28px_rgba(99,102,241,0.5)] active:scale-[0.98]"
-            >
-              지금 이력서 만들기
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Link>
           </div>
         </section>
       </main>

@@ -10,11 +10,11 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "AI 이력서 빌더",
-  description: "AI와 대화하며 완성하는 이력서. 자연어로 지시하면 AI가 즉시 수정하고, 채용공고 기반 맞춤 최적화를 제공합니다.",
+  title: "이력서 빌더",
+  description: "대화하며 완성하는 이력서. 원하는 방향을 이야기하면 이력서에 바로 반영됩니다.",
   openGraph: {
-    title: "AI 이력서 빌더",
-    description: "AI와 대화하며 완성하는 이력서",
+    title: "이력서 빌더",
+    description: "대화하며 완성하는 이력서",
     type: "website",
   },
 };
