@@ -1,9 +1,16 @@
 import { create, useStore } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import { devtools } from "zustand/middleware";
+import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import { temporal } from "zundo";
 import { createEmptyResume } from "@/lib/resume/schema";
 import type { Resume, Tone, JdMetadata, CoreCompetency, ExperienceEntry, StarHighlight, EmploymentType } from "@/types/resume";
+
+// SSR 안전 스토리지 — 서버 렌더 시 localStorage 접근으로 인한 크래시 방지
+const resumeStorage = createJSONStorage<{ resume: Resume }>(() =>
+  typeof window !== "undefined"
+    ? window.localStorage
+    : { getItem: () => null, setItem: () => {}, removeItem: () => {} }
+);
 
 // addExperience 입력 타입 (workItems 없이 기본 필드만)
 interface AddExperienceInput {
@@ -34,9 +41,10 @@ interface ResumeState {
 }
 
 export const useResumeStore = create<ResumeState>()(
-  temporal(
-    devtools(
-      immer((set) => ({
+  persist(
+    temporal(
+      devtools(
+        immer((set) => ({
         resume: createEmptyResume("default"),
         isDirty: false,
         setResume: (resume) =>
@@ -130,12 +138,22 @@ export const useResumeStore = create<ResumeState>()(
       })),
       { name: "resume-store" }
     ),
+      {
+        // 변경을 history에 저장할 조건 — isDirty 변경은 제외
+        partialize: (state) => ({
+          resume: state.resume,
+        }),
+        limit: 30, // 최대 30단계
+      }
+    ),
+    // localStorage 지속성 — 새로고침/탭 종료 후에도 이력서 유지
     {
-      // 변경을 history에 저장할 조건 — isDirty 변경은 제외
-      partialize: (state) => ({
-        resume: state.resume,
-      }),
-      limit: 30, // 최대 30단계
+      name: "resume-storage",
+      version: 1,
+      storage: resumeStorage,
+      // SSR 하이드레이션 불일치 방지 — builder 페이지 마운트 후 수동 rehydrate
+      skipHydration: true,
+      partialize: (state) => ({ resume: state.resume }),
     }
   )
 );

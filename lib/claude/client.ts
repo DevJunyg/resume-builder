@@ -9,5 +9,5 @@ export const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-export const CLAUDE_MODEL = "claude-sonnet-4-6" as const;
+export const CLAUDE_MODEL = "claude-sonnet-5" as const;
 export const MAX_TOKENS = 4096 as const;

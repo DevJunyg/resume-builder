@@ -52,6 +52,8 @@ export async function POST(request: NextRequest) {
         const anthropicStream = anthropic.messages.stream({
           model: CLAUDE_MODEL,
           max_tokens: MAX_TOKENS,
+          // 빠른 응답 유지 — thinking 없이 즉시 스트리밍 (Sonnet 5는 기본이 adaptive)
+          thinking: { type: "disabled" },
           system: RESUME_SYSTEM_PROMPT,
           tools: RESUME_TOOLS,
           messages,
@@ -123,6 +125,7 @@ export async function POST(request: NextRequest) {
             const followUpStream = anthropic.messages.stream({
               model: CLAUDE_MODEL,
               max_tokens: MAX_TOKENS,
+              thinking: { type: "disabled" },
               system: RESUME_SYSTEM_PROMPT,
               tools: RESUME_TOOLS,
               messages: followUpMessages,

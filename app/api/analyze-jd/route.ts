@@ -15,6 +15,21 @@ interface JdAnalysisResult {
 const JD_ANALYSIS_SYSTEM_PROMPT =
   '당신은 채용공고(JD) 분석 전문가입니다. 입력된 JD를 분석해 다음 JSON 형식으로만 응답하세요 (다른 텍스트 없이):\n{"keywords":[...],"requiredSkills":[...],"preferredSkills":[...],"summary":"한 줄 요약"}';
 
+// LLM 응답에서 JSON 본문만 추출 — 코드펜스(```json)나 앞뒤 설명이 붙어도 견고하게 파싱
+function extractJson(text: string): string {
+  let t = text.trim();
+  // ```json ... ``` 또는 ``` ... ``` 코드펜스 제거
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim();
+  // 첫 '{' 부터 마지막 '}' 까지만 취함 (앞뒤 잡텍스트 제거)
+  const start = t.indexOf("{");
+  const end = t.lastIndexOf("}");
+  if (start !== -1 && end !== -1 && end > start) {
+    t = t.slice(start, end + 1);
+  }
+  return t;
+}
+
 // POST /api/analyze-jd
 // Body: { jdText: string }
 // Response: JSON { keywords: string[], requiredSkills: string[], preferredSkills: string[], summary: string }
@@ -60,6 +75,8 @@ export async function POST(request: NextRequest) {
     const response = await anthropic.messages.create({
       model: CLAUDE_MODEL,
       max_tokens: 1024,
+      // 구조화된 JSON 추출만 필요 — thinking 비활성화로 지연/비용 최소화
+      thinking: { type: "disabled" },
       system: JD_ANALYSIS_SYSTEM_PROMPT,
       messages: [{ role: "user", content: jdText.trim() }],
     });
@@ -73,10 +90,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // JSON 파싱 — 실패 시 PARSE_ERROR 반환
+    // JSON 파싱 — 코드펜스/잡텍스트를 제거한 뒤 파싱 (실패 시 PARSE_ERROR 반환)
     let result: JdAnalysisResult;
     try {
-      result = JSON.parse(textBlock.text) as JdAnalysisResult;
+      result = JSON.parse(extractJson(textBlock.text)) as JdAnalysisResult;
     } catch {
       return Response.json(
         {
