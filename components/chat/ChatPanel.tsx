@@ -118,12 +118,12 @@ function EmptyState({ onSend, disabled }: EmptyStateProps) {
       </div>
       <div className="flex flex-col gap-1.5">
         <h3 className="text-[14px] font-semibold text-foreground">
-          AI 커리어 코치와 대화를 시작하세요
+          대화를 시작하세요
         </h3>
         <p className="text-[12px] leading-relaxed text-text-muted">
-          경험을 자유롭게 이야기해 주세요.
+          경험을 자유롭게 이야기하면
           <br />
-          AI가 이력서에 맞게 재구성해 드립니다.
+          이력서 형태로 정리해 드립니다.
         </p>
       </div>
       {/* 퀵 액션 제안 */}
@@ -157,29 +157,12 @@ export function ChatPanel() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // 언마운트 시 스트리밍 fetch 중단용 AbortController
   const abortControllerRef = useRef<AbortController | null>(null);
-  // 웰컴 메시지 중복 방지 플래그
-  const welcomeSentRef = useRef(false);
 
   // 언마운트 시 진행 중인 스트리밍 정리
   useEffect(() => {
     return () => {
       abortControllerRef.current?.abort();
     };
-  }, []);
-
-  // 첫 진입 시 AI 웰컴 메시지 자동 표시 (SSE 스트리밍)
-  useEffect(() => {
-    if (messages.length > 0 || welcomeSentRef.current) return;
-    welcomeSentRef.current = true;
-
-    const WELCOME = "안녕하세요! AI 커리어 코치입니다. 어떤 직무에 지원하실 예정인가요? 직무와 간략한 경력을 말씀해 주시면 최적화된 이력서 작성을 도와드릴게요.\n\n예를 들어: \"5년차 프론트엔드 개발자, 핀테크 스타트업 지원\" 처럼 시작하시면 됩니다.";
-
-    // 타이핑 효과를 주기 위해 setTimeout으로 메시지 삽입
-    const timer = setTimeout(() => {
-      addMessage({ role: "assistant", content: WELCOME });
-    }, 400);
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 메시지 추가 시 자동 스크롤
