@@ -127,7 +127,7 @@ function BrowserMockup() {
                 }}
               >
                 <span>{phase === 1 ? "✏️" : "✓"}</span>
-                {phase === 1 ? "AI 수정 중..." : "AI가 수정했어요"}
+                {phase === 1 ? "수정 중..." : "수정했어요"}
               </div>
             )}
 
@@ -180,11 +180,6 @@ export default function HomePage() {
         <section className="mx-auto flex max-w-6xl items-center gap-16 px-6 pb-20 pt-32">
           {/* 좌: 카피 */}
           <div className="flex-shrink-0 basis-[520px]">
-            <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-accent-brand/25 bg-accent-brand/5 px-3.5 py-1.5 text-[13px] font-medium text-accent-brand">
-              <span className="h-1.5 w-1.5 rounded-full bg-accent-brand" />
-              AI-Powered Resume Builder
-            </div>
-
             <h1 className="mb-6 text-[58px] font-extrabold leading-[1.08] tracking-[-0.04em] text-foreground">
               대화하며
               <br />
@@ -192,7 +187,7 @@ export default function HomePage() {
             </h1>
 
             <p className="mb-10 max-w-[420px] text-[18px] leading-[1.7] text-text-muted">
-              자연어로 지시하면 AI가 즉시 수정합니다. 채용 공고를 넣으면 매칭 포인트를 강조하고, 모든 변경사항은 실시간 하이라이트로 확인하세요.
+              원하는 방향을 이야기하면 이력서에 바로 반영됩니다. 채용 공고를 넣으면 관련 경력을 맞춰 정리해 줍니다.
             </p>
 
             <div className="flex gap-3">
