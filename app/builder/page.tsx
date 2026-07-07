@@ -8,7 +8,7 @@ import { ResumePreview } from "@/components/preview/ResumePreview";
 import { ToolsPanel } from "@/components/tools/ToolsPanel";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { useUiStore } from "@/stores/ui-store";
-import { useTemporalStore } from "@/stores/resume-store";
+import { useResumeStore, useTemporalStore } from "@/stores/resume-store";
 import type { MobileTab } from "@/stores/ui-store";
 
 interface MobileTabItem {
@@ -26,6 +26,11 @@ const MOBILE_TABS: MobileTabItem[] = [
 export default function BuilderPage() {
   const { activeMobileTab, setActiveMobileTab } = useUiStore();
   const { undo, redo, pastStates, futureStates } = useTemporalStore((s) => s);
+
+  // 저장된 이력서를 localStorage에서 복원 (skipHydration 대응)
+  useEffect(() => {
+    void useResumeStore.persist.rehydrate();
+  }, []);
 
   const canUndo = pastStates.length > 0;
   const canRedo = futureStates.length > 0;

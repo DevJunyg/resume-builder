@@ -51,6 +51,8 @@ export async function POST(request: NextRequest) {
         const response = await anthropic.messages.stream({
           model: CLAUDE_MODEL,
           max_tokens: 512,
+          // 문장 재작성은 즉시 응답이 중요 — thinking 비활성화
+          thinking: { type: "disabled" },
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMessage }],
         });
