@@ -307,7 +307,7 @@ function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
 
   return (
     <div
-      className={`flex flex-col gap-3 ${isJdMatch ? "rounded-r-sm py-1" : ""}`}
+      className={`pdf-block flex flex-col gap-3 ${isJdMatch ? "rounded-r-sm py-1" : ""}`}
       style={
         isJdMatch
           ? {
@@ -379,7 +379,7 @@ function ExperienceSection() {
 // 학력 단일 Entry 렌더
 function EducationEntryItem({ entry }: { entry: Education }) {
   return (
-    <div className="flex items-start justify-between">
+    <div className="pdf-block flex items-start justify-between">
       <div>
         <span className="text-[13px] font-medium" style={{ color: RESUME_COLORS.body }}>
           {entry.institution}

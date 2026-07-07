@@ -52,9 +52,9 @@ export default function BuilderPage() {
   }, [canUndo, canRedo, undo, redo]);
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-background">
+    <div className="builder-shell flex h-screen flex-col overflow-hidden bg-background">
       {/* 헤더 */}
-      <header className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur-sm">
+      <header className="print-hide flex-shrink-0 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="flex h-14 items-center justify-between px-4">
           <Link
             href="/"
@@ -106,23 +106,23 @@ export default function BuilderPage() {
       {/* 데스크탑 3단 레이아웃 (md 이상) */}
       <div id="main-content" className="hidden flex-1 overflow-hidden md:flex">
         {/* 좌: 채팅 패널 340px */}
-        <aside className="w-[340px] flex-shrink-0 overflow-hidden border-r border-border">
+        <aside className="print-hide w-[340px] flex-shrink-0 overflow-hidden border-r border-border">
           <ChatPanel />
         </aside>
 
         {/* 중: 이력서 미리보기 */}
-        <div className="flex flex-1 overflow-hidden">
+        <div className="print-preview-wrap flex flex-1 overflow-hidden">
           <ResumePreview />
         </div>
 
         {/* 우: 도구 패널 264px */}
-        <aside className="w-[264px] flex-shrink-0 overflow-hidden border-l border-border">
+        <aside className="print-hide w-[264px] flex-shrink-0 overflow-hidden border-l border-border">
           <ToolsPanel />
         </aside>
       </div>
 
       {/* 모바일 탭 컨텐츠 (md 미만) */}
-      <div className="flex flex-1 flex-col overflow-hidden md:hidden">
+      <div className="print-hide flex flex-1 flex-col overflow-hidden md:hidden">
         <div className="flex-1 overflow-hidden">
           {activeMobileTab === "chat" && <div className="h-full"><ChatPanel /></div>}
           {activeMobileTab === "preview" && <div className="h-full overflow-hidden"><ResumePreview /></div>}
