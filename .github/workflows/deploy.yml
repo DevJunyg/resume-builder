@@ -1,0 +1,90 @@
+name: Deploy to Amazon ECS
+
+# main에 머지되면 Docker 이미지를 빌드해 ECR에 push하고 ECS 서비스를 갱신한다.
+# 수동 실행(workflow_dispatch)도 가능.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# 배포는 동시에 하나만 — 진행 중 배포를 취소하지 않고 대기시킨다
+concurrency:
+  group: deploy-ecs
+  cancel-in-progress: false
+
+# OIDC로 AWS에 인증하려면 id-token 쓰기 권한이 필요 (장기 액세스키 불필요)
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    name: Build image → ECR → ECS
+    runs-on: ubuntu-latest
+    # AWS 설정(Variables)이 끝나기 전에는 잡을 건너뛴다 → main 머지 시 불필요한 실패 방지.
+    # docs/cicd.md 대로 AWS_ROLE_ARN 등을 등록하면 자동으로 활성화된다.
+    if: ${{ vars.AWS_ROLE_ARN != '' }}
+    # (선택) GitHub Environment 'production'에 required reviewers를 걸면
+    # prod 배포 승인 게이트가 된다.
+    environment: production
+    env:
+      AWS_REGION: ${{ vars.AWS_REGION }}
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      ECS_CLUSTER: ${{ vars.ECS_CLUSTER }}
+      ECS_SERVICE: ${{ vars.ECS_SERVICE }}
+      ECS_TASK_FAMILY: ${{ vars.ECS_TASK_FAMILY }}
+      CONTAINER_NAME: ${{ vars.CONTAINER_NAME }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # GitHub OIDC 토큰 → AWS IAM Role 신뢰관계로 임시 자격증명 획득
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & push image
+        id: image
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          IMAGE="$REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+          docker build -t "$IMAGE" -t "$REGISTRY/$ECR_REPOSITORY:latest" .
+          docker push "$IMAGE"
+          docker push "$REGISTRY/$ECR_REPOSITORY:latest"
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+
+      # 현재 서비스의 task definition을 받아 읽기전용 필드를 제거
+      # (describe 결과에는 register가 거부하는 필드들이 포함되어 있다)
+      - name: Fetch & clean current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition "$ECS_TASK_FAMILY" \
+            --query taskDefinition \
+          | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy, .deregisteredAt, .enableFaultInjection)
+                | with_entries(select(.value != null))' \
+          > task-definition.json
+
+      # 새 이미지를 task definition에 주입
+      - name: Render new image into task definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ env.CONTAINER_NAME }}
+          image: ${{ steps.image.outputs.image }}
+
+      # 새 revision 등록 + 서비스 업데이트, 안정화까지 대기 (실패 시 워크플로 실패)
+      - name: Deploy to Amazon ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          cluster: ${{ env.ECS_CLUSTER }}
+          service: ${{ env.ECS_SERVICE }}
+          wait-for-service-stability: true
