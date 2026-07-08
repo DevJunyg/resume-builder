@@ -18,7 +18,8 @@ CI는 추가 설정 없이 바로 동작한다. 배포 워크플로는 아래 AW
 **GitHub → Settings → Branches → Add branch ruleset (또는 Branch protection rule)**
 - Target: `main`
 - ✅ Require a pull request before merging
-- ✅ Require status checks to pass → 검색해서 **`Lint · Typecheck · Build`** 추가
+- ✅ Require status checks to pass → 검색해서 **`Lint`**, **`Typecheck`**, **`Build`** 세 개를 각각 추가
+  (워크플로가 잡 3개로 분리돼 있어 체크도 3개로 보고된다)
 - (선택) ✅ Require branches to be up to date before merging
 
 이제 CI 실패 시 main 머지가 차단된다.
