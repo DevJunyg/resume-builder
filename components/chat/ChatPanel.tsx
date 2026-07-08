@@ -207,6 +207,16 @@ export function ChatPanel() {
             inp.highlights as Array<StarHighlight>
           );
           break;
+        case "update_skills":
+          resumeStore.updateSkills(
+            inp as unknown as Parameters<typeof resumeStore.updateSkills>[0]
+          );
+          break;
+        case "add_education":
+          resumeStore.addEducation(
+            inp as unknown as Parameters<typeof resumeStore.addEducation>[0]
+          );
+          break;
         default:
           // 알 수 없는 tool 이름은 무시
           break;

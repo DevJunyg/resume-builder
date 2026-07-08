@@ -3,7 +3,25 @@ import { immer } from "zustand/middleware/immer";
 import { devtools, persist, createJSONStorage } from "zustand/middleware";
 import { temporal } from "zundo";
 import { createEmptyResume } from "@/lib/resume/schema";
-import type { Resume, Tone, JdMetadata, CoreCompetency, ExperienceEntry, StarHighlight, EmploymentType } from "@/types/resume";
+import type { Resume, Tone, JdMetadata, CoreCompetency, ExperienceEntry, StarHighlight, EmploymentType, Skills, Education } from "@/types/resume";
+
+// endDate 정규화 — 모델이 "null" 문자열/빈값/"현재" 등을 보내도 실제 null(진행 중)로 통일
+function normalizeEndDate(v: string | null | undefined): string | null {
+  if (v == null) return null;
+  const t = v.trim();
+  if (
+    t === "" ||
+    t.toLowerCase() === "null" ||
+    t === "현재" ||
+    t === "재직중" ||
+    t === "재직 중" ||
+    t === "현재 재직 중" ||
+    t.toLowerCase() === "present"
+  ) {
+    return null;
+  }
+  return t;
+}
 
 // SSR 안전 스토리지 — 서버 렌더 시 localStorage 접근으로 인한 크래시 방지
 const resumeStorage = createJSONStorage<{ resume: Resume }>(() =>
@@ -18,10 +36,22 @@ interface AddExperienceInput {
   company: string;
   role: string;
   startDate: string;
-  endDate: string | null;
+  endDate?: string | null; // 진행 중이면 생략/누락 가능
   department?: string;
   location?: string;
   employmentType?: EmploymentType;
+}
+
+// addEducation 입력 타입
+interface AddEducationInput {
+  id: string;
+  institution: string;
+  degree: string;
+  field: string;
+  startDate: string;
+  endDate?: string | null;
+  gpa?: string;
+  achievements?: string[];
 }
 
 interface ResumeState {
@@ -36,6 +66,8 @@ interface ResumeState {
   updateCoreCompetencies: (items: Array<CoreCompetency>) => void;
   addExperience: (entry: AddExperienceInput) => void;
   updateExperienceHighlights: (experienceId: string, highlights: Array<StarHighlight>) => void;
+  updateSkills: (skills: Skills) => void;
+  addEducation: (entry: AddEducationInput) => void;
   reorderSections: (fromIndex: number, toIndex: number) => void;
   markClean: () => void;
 }
@@ -90,13 +122,23 @@ export const useResumeStore = create<ResumeState>()(
           }),
         addExperience: (entry) =>
           set((state) => {
-            // 최신 경력이 앞에 오도록 배열 맨 앞에 추가
             const newEntry: ExperienceEntry = {
               ...entry,
+              endDate: normalizeEndDate(entry.endDate),
               workItems: [],
               isJdHighlighted: false,
             };
-            state.resume.experience.unshift(newEntry);
+            // 같은 회사+입사시기면 덮어쓰기(중복 방지), 아니면 최신순으로 맨 앞에 추가
+            const idx = state.resume.experience.findIndex(
+              (e) => e.company === newEntry.company && e.startDate === newEntry.startDate
+            );
+            if (idx !== -1) {
+              // 기존 경력의 상세 하이라이트(workItems)는 보존
+              newEntry.workItems = state.resume.experience[idx].workItems;
+              state.resume.experience[idx] = newEntry;
+            } else {
+              state.resume.experience.unshift(newEntry);
+            }
             state.isDirty = true;
           }),
         updateExperienceHighlights: (experienceId, highlights) =>
@@ -117,6 +159,30 @@ export const useResumeStore = create<ResumeState>()(
             } else {
               // 첫 번째 workItem의 highlights 교체
               exp.workItems[0].highlights = highlights;
+            }
+            state.isDirty = true;
+          }),
+        updateSkills: (skills) =>
+          set((state) => {
+            // 전체 덮어쓰기 (technical/languages/certifications)
+            state.resume.skills = skills;
+            state.isDirty = true;
+          }),
+        addEducation: (entry) =>
+          set((state) => {
+            const newEntry: Education = {
+              ...entry,
+              endDate: normalizeEndDate(entry.endDate),
+              achievements: entry.achievements ?? [],
+            };
+            // 같은 학교+입학시기면 덮어쓰기(중복 방지)
+            const idx = state.resume.education.findIndex(
+              (e) => e.institution === newEntry.institution && e.startDate === newEntry.startDate
+            );
+            if (idx !== -1) {
+              state.resume.education[idx] = newEntry;
+            } else {
+              state.resume.education.push(newEntry);
             }
             state.isDirty = true;
           }),

@@ -48,100 +48,72 @@ export async function POST(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      // SSE JSON 이벤트 전송 헬퍼
+      const send = (obj: unknown) =>
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(obj)}\n\n`));
+
       try {
-        const anthropicStream = anthropic.messages.stream({
-          model: CLAUDE_MODEL,
-          max_tokens: MAX_TOKENS,
-          // 빠른 응답 유지 — thinking 없이 즉시 스트리밍 (Sonnet 5는 기본이 adaptive)
-          thinking: { type: "disabled" },
-          system: RESUME_SYSTEM_PROMPT,
-          tools: RESUME_TOOLS,
-          messages,
-        });
+        // 에이전트 루프 — 모델이 tool 호출을 멈출 때까지 여러 라운드 반복.
+        // (기존엔 1라운드 + follow-up 1회만 처리해서, 2번째 라운드 이후의 tool 호출이
+        //  전부 무시됐다. 그 탓에 모델이 "이제 추가하겠습니다"라고 말만 하고 실제
+        //  경력 하이라이트/스킬/학력 등은 반영되지 않는 버그가 있었다.)
+        let conversation: Anthropic.MessageParam[] = messages;
+        const MAX_ROUNDS = 10; // 무한 루프 방지 안전장치
 
-        // 스트리밍 중 텍스트 청크를 실시간으로 전송
-        for await (const event of anthropicStream) {
-          if (
-            event.type === "content_block_delta" &&
-            event.delta.type === "text_delta"
-          ) {
-            const chunk = `data: ${JSON.stringify({ text: event.delta.text })}\n\n`;
-            controller.enqueue(encoder.encode(chunk));
+        for (let round = 0; round < MAX_ROUNDS; round++) {
+          const roundStream = anthropic.messages.stream({
+            model: CLAUDE_MODEL,
+            max_tokens: MAX_TOKENS,
+            // 빠른 응답 유지 — thinking 없이 즉시 스트리밍 (Sonnet 5는 기본이 adaptive)
+            thinking: { type: "disabled" },
+            system: RESUME_SYSTEM_PROMPT,
+            tools: RESUME_TOOLS,
+            messages: conversation,
+          });
+
+          // 이번 라운드의 텍스트 청크를 실시간 전송
+          for await (const event of roundStream) {
+            if (
+              event.type === "content_block_delta" &&
+              event.delta.type === "text_delta"
+            ) {
+              send({ text: event.delta.text });
+            }
           }
-        }
 
-        // 스트림 완료 후 최종 메시지 확인 (tool_use 여부 판단)
-        const finalMessage = await anthropicStream.finalMessage();
+          const finalMessage = await roundStream.finalMessage();
 
-        if (finalMessage.stop_reason === "tool_use") {
-          // tool_use 블록을 추출해 SSE 이벤트로 emit하고 후속 대화 처리
-          const toolCalls: Array<{
-            id: string;
-            name: string;
-            input: unknown;
+          // tool 호출이 없으면 대화 종료
+          if (finalMessage.stop_reason !== "tool_use") break;
+
+          // 이번 라운드의 tool_use 블록: 프론트에 emit + tool_result 준비
+          const toolResults: Array<{
+            type: "tool_result";
+            tool_use_id: string;
+            content: string;
           }> = [];
 
           for (const block of finalMessage.content) {
             if (block.type === "tool_use") {
-              // tool_call 이벤트 emit — 프론트엔드가 이력서 상태를 업데이트하는 데 사용
-              const toolCallChunk = `data: ${JSON.stringify({
-                type: "tool_call",
-                name: block.name,
-                input: block.input,
-              })}\n\n`;
-              controller.enqueue(encoder.encode(toolCallChunk));
+              // 프론트엔드가 이력서 상태를 업데이트하는 데 사용
+              send({ type: "tool_call", name: block.name, input: block.input });
+              // diff 하이라이트 트리거용 섹션 정보
+              send({ type: "tool_done", sections: TOOL_SECTION_MAP[block.name] ?? [] });
 
-              toolCalls.push({
-                id: block.id,
-                name: block.name,
-                input: block.input,
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: block.id,
+                content: "성공적으로 업데이트했습니다.",
               });
-
-              // tool_done 이벤트 emit — diff 하이라이트 트리거용 섹션 정보 포함
-              const sections = TOOL_SECTION_MAP[block.name] ?? [];
-              const toolDoneChunk = `data: ${JSON.stringify({
-                type: "tool_done",
-                sections,
-              })}\n\n`;
-              controller.enqueue(encoder.encode(toolDoneChunk));
             }
           }
 
-          // tool_result 메시지로 후속 대화를 이어 Claude가 변경 내용을 설명하게 함
-          if (toolCalls.length > 0) {
-            const followUpMessages: Anthropic.MessageParam[] = [
-              ...messages,
-              { role: "assistant", content: finalMessage.content },
-              {
-                role: "user",
-                content: toolCalls.map((tc) => ({
-                  type: "tool_result" as const,
-                  tool_use_id: tc.id,
-                  content: "성공적으로 업데이트했습니다.",
-                })),
-              },
-            ];
-
-            const followUpStream = anthropic.messages.stream({
-              model: CLAUDE_MODEL,
-              max_tokens: MAX_TOKENS,
-              thinking: { type: "disabled" },
-              system: RESUME_SYSTEM_PROMPT,
-              tools: RESUME_TOOLS,
-              messages: followUpMessages,
-            });
-
-            // 후속 스트림의 텍스트 청크를 동일하게 emit
-            for await (const followEvent of followUpStream) {
-              if (
-                followEvent.type === "content_block_delta" &&
-                followEvent.delta.type === "text_delta"
-              ) {
-                const chunk = `data: ${JSON.stringify({ text: followEvent.delta.text })}\n\n`;
-                controller.enqueue(encoder.encode(chunk));
-              }
-            }
-          }
+          // 다음 라운드로 대화를 이어붙임 (assistant tool_use + user tool_result)
+          conversation = [
+            ...conversation,
+            { role: "assistant", content: finalMessage.content },
+            { role: "user", content: toolResults },
+          ];
         }
 
         controller.enqueue(encoder.encode("data: [DONE]\n\n"));
