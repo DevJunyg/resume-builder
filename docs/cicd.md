@@ -7,7 +7,7 @@
 | **CI 게이트** | `.github/workflows/ci.yml` | PR, `main` push | `lint` + `typecheck` + `build` |
 | **ECS 배포** | `.github/workflows/deploy.yml` | `main` push, 수동 | Docker build → ECR push → ECS 갱신 |
 
-CI는 추가 설정 없이 바로 동작한다. 배포 워크플로는 아래 AWS/GitHub 설정을 마쳐야 실제로 돈다.
+CI는 추가 설정 없이 바로 동작한다. 배포 워크플로는 아래 AWS/GitHub 설정을 마쳐야 실제로 돈다 — `AWS_ROLE_ARN` 변수가 비어 있으면 배포 잡은 자동으로 **skip**되므로, 설정 전이라도 main 머지가 빨간 X로 실패하지 않는다.
 
 ---
 
