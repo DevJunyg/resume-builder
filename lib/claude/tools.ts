@@ -72,8 +72,8 @@ export const RESUME_TOOLS: Anthropic.Tool[] = [
         startDate: { type: "string", description: "YYYY-MM 형식" },
         endDate: {
           type: "string",
-          description: "YYYY-MM 형식. 현재 재직 중이면 null 문자열 전달",
-          nullable: true,
+          description:
+            "YYYY-MM 형식. 현재 재직 중이면 이 필드를 아예 생략하세요 (문자열 \"null\"을 넣지 마세요)",
         },
         employmentType: {
           type: "string",
@@ -118,6 +118,73 @@ export const RESUME_TOOLS: Anthropic.Tool[] = [
       required: ["experienceId", "highlights"],
     },
   },
+  {
+    name: "update_skills",
+    description:
+      "이력서의 기술 스택을 업데이트합니다. 카테고리별 기술 스킬과 어학, 자격증을 포함합니다. 사용자가 보유 기술/스킬/자격증을 알려줄 때 호출합니다. (전체를 한 번에 전달 — 부분 갱신이 아니라 덮어씀)",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        technical: {
+          type: "array",
+          description: "카테고리별 기술 스킬 목록",
+          items: {
+            type: "object",
+            properties: {
+              category: {
+                type: "string",
+                description: "카테고리 (예: Frontend, Backend, DevOps). 분류가 애매하면 '기술' 하나로 묶어도 됨",
+              },
+              items: {
+                type: "array",
+                items: { type: "string" },
+                description: "해당 카테고리의 기술 목록",
+              },
+            },
+            required: ["category", "items"],
+          },
+        },
+        languages: {
+          type: "array",
+          items: { type: "string" },
+          description: "어학 능력 (선택)",
+        },
+        certifications: {
+          type: "array",
+          items: { type: "string" },
+          description: "자격증 목록 (선택). 예: 정보처리기사, 무선설비기사",
+        },
+      },
+      required: ["technical"],
+    },
+  },
+  {
+    name: "add_education",
+    description:
+      "이력서에 학력을 추가합니다. 같은 학교+입학시기면 덮어씁니다(중복 방지).",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        id: { type: "string", description: "고유 ID" },
+        institution: { type: "string", description: "학교명" },
+        degree: { type: "string", description: "학위 (예: 학사, 석사, 박사)" },
+        field: { type: "string", description: "전공" },
+        startDate: { type: "string", description: "YYYY 또는 YYYY-MM 형식" },
+        endDate: {
+          type: "string",
+          description:
+            "YYYY 또는 YYYY-MM 형식. 재학 중이면 이 필드를 생략하세요 (문자열 \"null\" 금지)",
+        },
+        gpa: { type: "string", description: "학점 (선택, 예: 3.8/4.5)" },
+        achievements: {
+          type: "array",
+          items: { type: "string" },
+          description: "주요 성과/수상 (선택)",
+        },
+      },
+      required: ["id", "institution", "degree", "field", "startDate"],
+    },
+  },
 ];
 
 // Tool 이름 → 업데이트 대상 섹션 ID 매핑 (Diff 하이라이트용)
@@ -127,4 +194,6 @@ export const TOOL_SECTION_MAP: Record<string, string[]> = {
   update_core_competencies: ["core-competencies"],
   add_experience: ["experience"],
   update_experience_highlights: ["experience"],
+  update_skills: ["skills"],
+  add_education: ["education"],
 };
