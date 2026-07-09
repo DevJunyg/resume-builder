@@ -22,6 +22,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# 배포 확인용 버전 정보 — build-arg로 받은 값을 런타임 ENV로 노출 (/api/version)
+ARG GIT_SHA=unknown
+ARG BUILD_TIME
+ENV GIT_SHA=$GIT_SHA
+ENV BUILD_TIME=$BUILD_TIME
+
 # 보안: 비루트 사용자로 실행
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
