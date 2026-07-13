@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, FileDown, Clipboard, Check } from "lucide-react";
+import { Search, FileDown, Clipboard, Check, RotateCcw } from "lucide-react";
 import { useResumeStore } from "@/stores/resume-store";
 import { resumeToMarkdown } from "@/lib/resume/to-markdown";
 import type { Tone } from "@/types/resume";
@@ -14,7 +14,7 @@ const TONE_OPTIONS: { value: Tone; label: string; description: string }[] = [
 ];
 
 export function ToolsPanel() {
-  const { resume, updateJdMetadata, updateTone } = useResumeStore();
+  const { resume, updateJdMetadata, updateTone, clearResume } = useResumeStore();
   const currentTone = resume.metadata.tone;
 
   const [jdInput, setJdInput] = useState("");
@@ -214,6 +214,32 @@ export function ToolsPanel() {
               <span>{mdCopied ? "복사 완료!" : "Markdown 복사"}</span>
             </button>
           </div>
+        </section>
+
+        {/* 구분선 */}
+        <div className="h-px bg-border" aria-hidden="true" />
+
+        {/* 초기화 */}
+        <section aria-label="이력서 초기화">
+          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
+            초기화
+          </h3>
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm("이력서의 모든 내용을 지울까요?\n(Ctrl+Z로 되돌릴 수 있습니다)")) {
+                clearResume();
+              }
+            }}
+            className="flex w-full items-center gap-2 rounded-xl border border-red-400/30 bg-surface px-3.5 py-2.5 text-[12px] text-red-400 transition-colors hover:border-red-400/60 hover:bg-red-400/10"
+            aria-label="이력서 초기화"
+          >
+            <RotateCcw className="h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
+            <span>이력서 초기화</span>
+          </button>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-text-muted">
+            모든 내용이 지워집니다. 실수했다면 Ctrl+Z로 되돌릴 수 있어요.
+          </p>
         </section>
       </div>
     </aside>

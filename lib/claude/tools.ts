@@ -185,6 +185,71 @@ export const RESUME_TOOLS: Anthropic.Tool[] = [
       required: ["id", "institution", "degree", "field", "startDate"],
     },
   },
+  {
+    name: "update_experience",
+    description:
+      "기존 경력의 기본 정보(회사명/직책/부서/기간 등)를 수정합니다. 시스템 프롬프트에 제공된 현재 이력서 상태의 실제 experienceId를 사용하세요 (ID를 지어내지 마세요). 수정할 필드만 전달하면 됩니다.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        experienceId: { type: "string", description: "수정할 경력의 실제 ID" },
+        company: { type: "string" },
+        role: { type: "string" },
+        department: { type: "string" },
+        location: { type: "string" },
+        startDate: { type: "string", description: "YYYY-MM 형식" },
+        endDate: {
+          type: "string",
+          description:
+            "YYYY-MM 형식. 재직 중으로 바꾸려면 값에 \"현재\"를 전달 (문자열 \"null\" 금지)",
+        },
+        employmentType: {
+          type: "string",
+          enum: ["정규직", "계약직", "인턴", "프리랜서", "창업"],
+        },
+      },
+      required: ["experienceId"],
+    },
+  },
+  {
+    name: "delete_experience",
+    description:
+      "이력서에서 경력 하나를 삭제합니다. 사용자가 특정 경력의 삭제를 요청할 때 호출하세요. 현재 이력서 상태의 실제 experienceId를 사용하세요.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        experienceId: { type: "string", description: "삭제할 경력의 실제 ID" },
+      },
+      required: ["experienceId"],
+    },
+  },
+  {
+    name: "delete_education",
+    description:
+      "이력서에서 학력 하나를 삭제합니다. 현재 이력서 상태의 실제 educationId를 사용하세요.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        educationId: { type: "string", description: "삭제할 학력의 실제 ID" },
+      },
+      required: ["educationId"],
+    },
+  },
+  {
+    name: "clear_resume",
+    description:
+      "이력서 전체를 빈 상태로 초기화합니다. 되돌리기 어려운 작업이므로 사용자가 '초기화', '전부 지워줘', '처음부터 다시' 등 명시적으로 요청한 경우에만 호출하세요. 호출 전에 반드시 사용자에게 한 번 확인하세요.",
+    input_schema: {
+      type: "object" as const,
+      properties: {
+        confirm: {
+          type: "boolean",
+          description: "사용자가 초기화를 확인했으면 true",
+        },
+      },
+      required: ["confirm"],
+    },
+  },
 ];
 
 // Tool 이름 → 업데이트 대상 섹션 ID 매핑 (Diff 하이라이트용)
@@ -196,4 +261,15 @@ export const TOOL_SECTION_MAP: Record<string, string[]> = {
   update_experience_highlights: ["experience"],
   update_skills: ["skills"],
   add_education: ["education"],
+  update_experience: ["experience"],
+  delete_experience: ["experience"],
+  delete_education: ["education"],
+  clear_resume: [
+    "personal-info",
+    "brief-intro",
+    "core-competencies",
+    "experience",
+    "education",
+    "skills",
+  ],
 };
