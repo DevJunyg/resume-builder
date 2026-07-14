@@ -3,6 +3,9 @@
 로그인(GitHub OAuth)하면 이력서가 RDS에 저장되어 기기 간 이어서 작성할 수 있다.
 비로그인 시엔 기존처럼 localStorage만 사용한다.
 
+> 이 문서는 **1단계**(Vercel 런타임 + RDS public) 기준이다.
+> 프라이빗 RDS + ECS + HTTPS로 승격하는 **2단계 계획은 `docs/db-stage2-ecs.md`** 참고.
+
 ## 구성
 
 | 레이어 | 선택 | 이유 |
