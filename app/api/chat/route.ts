@@ -26,10 +26,21 @@ export async function POST(request: NextRequest) {
   }
 
   let messages: Anthropic.MessageParam[];
+  let resumeSnapshot: string | null = null;
 
   try {
     const body = await request.json();
     messages = body.messages;
+    // 현재 이력서 상태 — AI가 기존 항목의 실제 ID를 참조해 수정/삭제할 수 있게 함
+    if (body.resume && typeof body.resume === "object") {
+      // 토큰 절약: 렌더링 전용 필드 제외, 과대 입력 방어를 위해 길이 제한
+      const json = JSON.stringify(body.resume, (key, value) =>
+        key === "sections" || key === "metadata" || key === "isJdHighlighted"
+          ? undefined
+          : value
+      );
+      resumeSnapshot = json.length > 20000 ? json.slice(0, 20000) + "…(생략)" : json;
+    }
   } catch {
     return Response.json(
       { error: "INVALID_JSON", message: "요청 본문을 파싱할 수 없습니다" },
@@ -45,6 +56,18 @@ export async function POST(request: NextRequest) {
   }
 
   const encoder = new TextEncoder();
+
+  // 시스템 프롬프트: 고정 지침 + (있으면) 현재 이력서 상태
+  // 배열 형태로 분리해 두면 나중에 고정 블록에만 prompt caching을 걸 수 있다
+  const systemBlocks: Anthropic.TextBlockParam[] = [
+    { type: "text", text: RESUME_SYSTEM_PROMPT },
+  ];
+  if (resumeSnapshot) {
+    systemBlocks.push({
+      type: "text",
+      text: `## 현재 이력서 상태 (JSON)\n수정/삭제 tool 호출 시 반드시 아래의 실제 id 값을 사용하세요. ID를 지어내지 마세요.\n${resumeSnapshot}`,
+    });
+  }
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -66,7 +89,7 @@ export async function POST(request: NextRequest) {
             max_tokens: MAX_TOKENS,
             // 빠른 응답 유지 — thinking 없이 즉시 스트리밍 (Sonnet 5는 기본이 adaptive)
             thinking: { type: "disabled" },
-            system: RESUME_SYSTEM_PROMPT,
+            system: systemBlocks,
             tools: RESUME_TOOLS,
             messages: conversation,
           });

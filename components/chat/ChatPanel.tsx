@@ -217,6 +217,23 @@ export function ChatPanel() {
             inp as unknown as Parameters<typeof resumeStore.addEducation>[0]
           );
           break;
+        case "update_experience": {
+          const { experienceId, ...fields } = inp as { experienceId: string } & Record<string, unknown>;
+          resumeStore.updateExperience(
+            experienceId,
+            fields as Parameters<typeof resumeStore.updateExperience>[1]
+          );
+          break;
+        }
+        case "delete_experience":
+          resumeStore.deleteExperience(inp.experienceId as string);
+          break;
+        case "delete_education":
+          resumeStore.deleteEducation(inp.educationId as string);
+          break;
+        case "clear_resume":
+          resumeStore.clearResume();
+          break;
         default:
           // 알 수 없는 tool 이름은 무시
           break;
@@ -253,6 +270,8 @@ export function ChatPanel() {
           signal: abortControllerRef.current.signal,
           body: JSON.stringify({
             messages: [...priorMessages, { role: "user" as const, content: trimmed }],
+            // 현재 이력서 상태 동봉 — AI가 기존 항목의 실제 ID를 참조해 수정/삭제 가능
+            resume: useResumeStore.getState().resume,
           }),
         });
 

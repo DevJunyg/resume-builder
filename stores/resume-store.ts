@@ -68,6 +68,10 @@ interface ResumeState {
   updateExperienceHighlights: (experienceId: string, highlights: Array<StarHighlight>) => void;
   updateSkills: (skills: Skills) => void;
   addEducation: (entry: AddEducationInput) => void;
+  updateExperience: (experienceId: string, fields: Partial<Omit<ExperienceEntry, "id" | "workItems" | "isJdHighlighted">>) => void;
+  deleteExperience: (experienceId: string) => void;
+  deleteEducation: (educationId: string) => void;
+  clearResume: () => void;
   reorderSections: (fromIndex: number, toIndex: number) => void;
   markClean: () => void;
 }
@@ -184,6 +188,36 @@ export const useResumeStore = create<ResumeState>()(
             } else {
               state.resume.education.push(newEntry);
             }
+            state.isDirty = true;
+          }),
+        updateExperience: (experienceId, fields) =>
+          set((state) => {
+            const exp = state.resume.experience.find((e) => e.id === experienceId);
+            if (!exp) return;
+            // 전달된 필드만 갱신, endDate는 정규화 ("null"/"현재" → null)
+            const { endDate, ...rest } = fields;
+            Object.assign(exp, rest);
+            if (endDate !== undefined) exp.endDate = normalizeEndDate(endDate);
+            state.isDirty = true;
+          }),
+        deleteExperience: (experienceId) =>
+          set((state) => {
+            state.resume.experience = state.resume.experience.filter(
+              (e) => e.id !== experienceId
+            );
+            state.isDirty = true;
+          }),
+        deleteEducation: (educationId) =>
+          set((state) => {
+            state.resume.education = state.resume.education.filter(
+              (e) => e.id !== educationId
+            );
+            state.isDirty = true;
+          }),
+        clearResume: () =>
+          set((state) => {
+            // 빈 이력서로 초기화 — undo(Ctrl+Z)로 복구 가능
+            state.resume = createEmptyResume("default");
             state.isDirty = true;
           }),
         reorderSections: (fromIndex, toIndex) =>

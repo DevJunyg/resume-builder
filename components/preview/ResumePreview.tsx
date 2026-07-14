@@ -21,7 +21,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Trash2 } from "lucide-react";
 import type { ExperienceEntry, Education, WorkItem, ResumeSection, SectionType } from "@/types/resume";
 
 // 이력서 카드 내부는 항상 흰색 배경 — 고정 색상 사용 (테마 무관)
@@ -304,10 +304,11 @@ function WorkItemEntry({ item }: { item: WorkItem }) {
 // 경력 단일 Entry 렌더
 function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
   const isJdMatch = entry.isJdHighlighted;
+  const deleteExperience = useResumeStore((s) => s.deleteExperience);
 
   return (
     <div
-      className={`pdf-block flex flex-col gap-3 ${isJdMatch ? "rounded-r-sm py-1" : ""}`}
+      className={`pdf-block group/entry flex flex-col gap-3 ${isJdMatch ? "rounded-r-sm py-1" : ""}`}
       style={
         isJdMatch
           ? {
@@ -333,11 +334,27 @@ function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
             {entry.role}
           </div>
         </div>
-        <div className="text-right text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
-          <div>
-            {entry.startDate} ~ {entry.endDate ?? "현재"}
+        <div className="flex items-start gap-1.5">
+          <div className="text-right text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
+            <div>
+              {entry.startDate} ~ {entry.endDate ?? "현재"}
+            </div>
+            {entry.location && <div>{entry.location}</div>}
           </div>
-          {entry.location && <div>{entry.location}</div>}
+          {/* 항목 삭제 — hover 시 노출, 인쇄 제외, Ctrl+Z로 복구 가능 */}
+          <button
+            type="button"
+            onClick={() => {
+              if (window.confirm(`'${entry.company}' 경력을 삭제할까요?`)) {
+                deleteExperience(entry.id);
+              }
+            }}
+            className="print-hide hidden h-5 w-5 items-center justify-center rounded text-[#c0c0d8] transition-colors hover:bg-red-50 hover:text-red-500 group-hover/entry:inline-flex"
+            aria-label={`${entry.company} 경력 삭제`}
+            title="이 경력 삭제"
+          >
+            <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
         </div>
       </div>
       {entry.workItems.length > 0 && (
@@ -378,8 +395,10 @@ function ExperienceSection() {
 
 // 학력 단일 Entry 렌더
 function EducationEntryItem({ entry }: { entry: Education }) {
+  const deleteEducation = useResumeStore((s) => s.deleteEducation);
+
   return (
-    <div className="pdf-block flex items-start justify-between">
+    <div className="pdf-block group/entry flex items-start justify-between">
       <div>
         <span className="text-[13px] font-medium" style={{ color: RESUME_COLORS.body }}>
           {entry.institution}
@@ -398,8 +417,23 @@ function EducationEntryItem({ entry }: { entry: Education }) {
           </ul>
         )}
       </div>
-      <div className="text-right text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
-        {entry.startDate} ~ {entry.endDate ?? "재학 중"}
+      <div className="flex items-start gap-1.5">
+        <div className="text-right text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
+          {entry.startDate} ~ {entry.endDate ?? "재학 중"}
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            if (window.confirm(`'${entry.institution}' 학력을 삭제할까요?`)) {
+              deleteEducation(entry.id);
+            }
+          }}
+          className="print-hide hidden h-5 w-5 items-center justify-center rounded text-[#c0c0d8] transition-colors hover:bg-red-50 hover:text-red-500 group-hover/entry:inline-flex"
+          aria-label={`${entry.institution} 학력 삭제`}
+          title="이 학력 삭제"
+        >
+          <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
+        </button>
       </div>
     </div>
   );

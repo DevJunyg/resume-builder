@@ -7,6 +7,8 @@ import { ChatPanel } from "@/components/chat/ChatPanel";
 import { ResumePreview } from "@/components/preview/ResumePreview";
 import { ToolsPanel } from "@/components/tools/ToolsPanel";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { UserMenu } from "@/components/auth/UserMenu";
+import { useCloudSync } from "@/lib/use-cloud-sync";
 import { useUiStore } from "@/stores/ui-store";
 import { useResumeStore, useTemporalStore } from "@/stores/resume-store";
 import type { MobileTab } from "@/stores/ui-store";
@@ -26,6 +28,8 @@ const MOBILE_TABS: MobileTabItem[] = [
 export default function BuilderPage() {
   const { activeMobileTab, setActiveMobileTab } = useUiStore();
   const { undo, redo, pastStates, futureStates } = useTemporalStore((s) => s);
+  // 로그인 시 이력서 클라우드 동기화 (비로그인은 localStorage만)
+  const syncStatus = useCloudSync();
 
   // 저장된 이력서를 localStorage에서 복원 (skipHydration 대응)
   useEffect(() => {
@@ -99,6 +103,8 @@ export default function BuilderPage() {
             </div>
             <div className="h-4 w-px bg-border" aria-hidden="true" />
             <ThemeToggle />
+            <div className="h-4 w-px bg-border" aria-hidden="true" />
+            <UserMenu syncStatus={syncStatus} />
           </div>
         </div>
       </header>
