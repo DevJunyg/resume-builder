@@ -15,7 +15,12 @@
 | 인증 | **Auth.js v5** GitHub OAuth, DB 세션 | BaaS 없이 직접 구현 (현업 방식) |
 | 검증 | zod `ResumeSchema`로 서버사이드 검증 | 클라이언트 불신 원칙 |
 
-테이블: `users`/`accounts`/`sessions`/`verification_tokens`(Auth.js 표준) + `resumes`(이력서 jsonb, 사용자당 1개 unique).
+테이블:
+- `users`/`accounts`/`sessions`/`verification_tokens` — Auth.js 표준
+- `resumes` — 이력서 jsonb. **사용자당 여러 개**(`resumes_user_id_idx`, unique 아님). 로그인 사용자는 헤더 스위처로 생성/전환/복제/삭제/이름변경.
+- `chat_messages` — 이력서별 대화 내역. `resume_id` FK(`onDelete: cascade`) — 이력서를 지우면 대화도 함께 삭제. `(resume_id, created_at)` 복합 인덱스로 시간순 조회.
+
+> 비로그인은 여전히 localStorage 단일 이력서만 사용한다(대화는 메모리). 다중 이력서/대화 저장은 로그인 시에만.
 
 ## 스키마 변경 워크플로 (현업 방식)
 
@@ -93,9 +98,21 @@ Client ID → `AUTH_GITHUB_ID`, Client secret 생성 → `AUTH_GITHUB_SECRET`.
 
 ## 동기화 규칙 (lib/use-cloud-sync.ts)
 
-- 로그인 직후: 서버 저장본이 있으면 **서버 우선**(기기 간 이어쓰기), 없으면 로컬을 첫 업로드
-- 이후 변경: 1.5초 디바운스로 PUT (last-write-wins)
+- 로그인 직후: 이력서 목록을 불러와 **가장 최근 것**을 활성화. 목록이 비어 있으면 현재 로컬 이력서를 첫 이력서로 업로드
+- 활성 이력서 변경: 1.5초 디바운스로 `PUT /api/resumes/[id]` (last-write-wins)
+- 대화 변경: 스트리밍이 끝나면 1.5초 디바운스로 `PUT /api/resumes/[id]/messages` (스냅샷 전체 교체)
+- 이력서 전환: 저장 대기분을 먼저 플러시 → 대상 이력서의 데이터+대화를 로드, undo 이력 초기화
 - 비로그인/DB 미설정: localStorage만 사용 — 기능 저하 없이 동작
+
+### API (모두 소유권 검증 — `userId`)
+
+| 메서드 | 경로 | 설명 |
+| --- | --- | --- |
+| GET | `/api/resumes` | 내 이력서 목록(메타) |
+| POST | `/api/resumes` | 새 이력서(`{ title?, resume? }`) |
+| GET/PUT/DELETE | `/api/resumes/[id]` | 조회 / data·title 갱신 / 삭제(대화 cascade) |
+| POST | `/api/resumes/[id]/duplicate` | 복제(대화는 복제하지 않음) |
+| GET/PUT | `/api/resumes/[id]/messages` | 대화 로드 / 스냅샷 전체 교체 저장 |
 
 ## 현업 학습 포인트
 

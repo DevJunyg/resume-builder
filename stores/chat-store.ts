@@ -16,6 +16,7 @@ interface ChatState {
   addMessage: (message: Omit<ChatMessage, "id" | "createdAt">) => string;
   appendToMessage: (id: string, text: string) => void;
   finishStreaming: (id: string) => void;
+  setMessages: (messages: ChatMessage[]) => void;
   clearMessages: () => void;
   getApiMessages: () => Array<{ role: "user" | "assistant"; content: string }>;
 }
@@ -59,6 +60,10 @@ export const useChatStore = create<ChatState>()(
           isStreaming: false,
           streamingMessageId: null,
         })),
+
+      // 서버에서 불러온 대화 내역으로 전체 교체 (활성 이력서 전환 시 사용)
+      setMessages: (messages) =>
+        set({ messages, isStreaming: false, streamingMessageId: null }),
 
       clearMessages: () =>
         set({ messages: [], isStreaming: false, streamingMessageId: null }),
