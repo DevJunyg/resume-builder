@@ -5,7 +5,7 @@ import {
   integer,
   primaryKey,
   jsonb,
-  uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
 import type { AdapterAccountType } from "next-auth/adapters";
 import type { Resume } from "@/types/resume";
@@ -64,7 +64,7 @@ export const verificationTokens = pgTable(
 
 // ─── 이력서 ──────────────────────────────────────────────────────────────
 // Resume 객체 전체를 jsonb로 저장 — 구조 변경이 잦은 문서형 데이터에 적합.
-// 지금은 사용자당 1개(unique) — 다중 이력서로 갈 때 unique 제거 마이그레이션.
+// 사용자당 여러 개 (다중 이력서). 조회 성능을 위해 user_id 인덱스.
 
 export const resumes = pgTable(
   "resumes",
@@ -84,5 +84,27 @@ export const resumes = pgTable(
       .notNull()
       .defaultNow(),
   },
-  (t) => [uniqueIndex("resumes_user_id_unique").on(t.userId)]
+  (t) => [index("resumes_user_id_idx").on(t.userId)]
+);
+
+// ─── 대화 내역 ────────────────────────────────────────────────────────────
+// 이력서별 채팅 메시지 (정규화). 이력서 삭제 시 cascade.
+
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    resumeId: text("resume_id")
+      .notNull()
+      .references(() => resumes.id, { onDelete: "cascade" }),
+    role: text("role").$type<"user" | "assistant">().notNull(),
+    content: text("content").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  // 이력서별 시간순 조회용 복합 인덱스
+  (t) => [index("chat_messages_resume_created_idx").on(t.resumeId, t.createdAt)]
 );

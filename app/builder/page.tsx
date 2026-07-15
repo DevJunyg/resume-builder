@@ -8,6 +8,7 @@ import { ResumePreview } from "@/components/preview/ResumePreview";
 import { ToolsPanel } from "@/components/tools/ToolsPanel";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { UserMenu } from "@/components/auth/UserMenu";
+import { ResumeSwitcher } from "@/components/resume/ResumeSwitcher";
 import { useCloudSync } from "@/lib/use-cloud-sync";
 import { useUiStore } from "@/stores/ui-store";
 import { useResumeStore, useTemporalStore } from "@/stores/resume-store";
@@ -29,7 +30,7 @@ export default function BuilderPage() {
   const { activeMobileTab, setActiveMobileTab } = useUiStore();
   const { undo, redo, pastStates, futureStates } = useTemporalStore((s) => s);
   // 로그인 시 이력서 클라우드 동기화 (비로그인은 localStorage만)
-  const syncStatus = useCloudSync();
+  const cloud = useCloudSync();
 
   // 저장된 이력서를 localStorage에서 복원 (skipHydration 대응)
   useEffect(() => {
@@ -60,23 +61,27 @@ export default function BuilderPage() {
       {/* 헤더 */}
       <header className="print-hide flex-shrink-0 border-b border-border bg-background/95 backdrop-blur-sm">
         <div className="flex h-14 items-center justify-between px-4">
-          <Link
-            href="/"
-            className="flex items-center gap-2 transition-opacity hover:opacity-70"
-            aria-label="랜딩 페이지로 이동"
-          >
-            <ArrowLeft className="h-4 w-4 text-text-muted" aria-hidden="true" />
-            <div
-              className="flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-[5px] gradient-button text-white"
-              aria-hidden="true"
-              style={{ fontSize: 11 }}
+          <div className="flex min-w-0 items-center gap-3">
+            <Link
+              href="/"
+              className="flex items-center gap-2 transition-opacity hover:opacity-70"
+              aria-label="랜딩 페이지로 이동"
             >
-              ≡
-            </div>
-            <span className="text-[14px] font-extrabold tracking-[-0.03em] text-foreground">
-              resumé<span className="gradient-text">.ai</span>
-            </span>
-          </Link>
+              <ArrowLeft className="h-4 w-4 text-text-muted" aria-hidden="true" />
+              <div
+                className="flex h-[22px] w-[22px] flex-shrink-0 items-center justify-center rounded-[5px] gradient-button text-white"
+                aria-hidden="true"
+                style={{ fontSize: 11 }}
+              >
+                ≡
+              </div>
+              <span className="hidden text-[14px] font-extrabold tracking-[-0.03em] text-foreground sm:inline">
+                resumé<span className="gradient-text">.ai</span>
+              </span>
+            </Link>
+            {/* 로그인 사용자: 이력서 목록 전환 */}
+            <ResumeSwitcher cloud={cloud} />
+          </div>
           <div className="flex items-center gap-2">
             {/* Undo / Redo 버튼 */}
             <div className="flex items-center gap-0.5">
@@ -104,7 +109,7 @@ export default function BuilderPage() {
             <div className="h-4 w-px bg-border" aria-hidden="true" />
             <ThemeToggle />
             <div className="h-4 w-px bg-border" aria-hidden="true" />
-            <UserMenu syncStatus={syncStatus} />
+            <UserMenu syncStatus={cloud.status} />
           </div>
         </div>
       </header>

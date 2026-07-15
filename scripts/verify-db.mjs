@@ -1,5 +1,5 @@
-// DB 스키마 검증 스크립트 — 실제 Postgres 없이 PGlite(인프로세스 Postgres)로
-// 생성된 마이그레이션 SQL을 적용하고 API가 쓰는 쿼리 경로(upsert 등)를 검증한다.
+// DB 스키마 검증 — 실제 Postgres 없이 PGlite(인프로세스 Postgres)로 마이그레이션을
+// 순서대로 적용하고 API가 쓰는 쿼리 경로(다중 이력서, 대화 cascade)를 검증한다.
 // 실행: npm run db:verify
 import { PGlite } from "@electric-sql/pglite";
 import { readFileSync, readdirSync } from "node:fs";
@@ -12,7 +12,7 @@ const check = (name, cond) => {
   if (!cond) failed++;
 };
 
-// 1) 마이그레이션 적용
+// 1) 마이그레이션 순서대로 적용
 const dir = "drizzle";
 const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
 for (const f of files) {
@@ -24,37 +24,43 @@ for (const f of files) {
 }
 check(`마이그레이션 적용 (${files.join(", ")})`, true);
 
-// 2) 사용자 생성 + 이력서 upsert (API PUT 경로와 동일한 SQL 패턴)
+// 2) 다중 이력서 — 한 사용자가 여러 개 (unique 제거 확인)
+await db.query(`INSERT INTO users (id, name, email) VALUES ('u1', '테스트', 't@t.com')`);
 await db.query(
-  `INSERT INTO users (id, name, email) VALUES ('u1', '테스트', 't@t.com')`
+  `INSERT INTO resumes (id, user_id, title, data) VALUES
+   ('r1', 'u1', '이력서 A', '{"v":1}'),
+   ('r2', 'u1', '이력서 B', '{"v":2}')`
 );
-const resumeV1 = JSON.stringify({ id: "default", version: 1 });
-const resumeV2 = JSON.stringify({ id: "default", version: 2 });
+const list = await db.query(
+  `SELECT id, title FROM resumes WHERE user_id = 'u1' ORDER BY title`
+);
+check("다중 이력서: 한 사용자에 2개 저장", list.rows.length === 2);
 
+// 3) 이력서별 대화 — 시간순 정렬
 await db.query(
-  `INSERT INTO resumes (id, user_id, data) VALUES ('r1', 'u1', $1)
-   ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
-  [resumeV1]
+  `INSERT INTO chat_messages (id, resume_id, role, content, created_at) VALUES
+   ('m1', 'r1', 'user',      '안녕',      now() - interval '2 sec'),
+   ('m2', 'r1', 'assistant', '반가워요',  now() - interval '1 sec'),
+   ('m3', 'r2', 'user',      '다른 이력서', now())`
 );
-await db.query(
-  `INSERT INTO resumes (id, user_id, data) VALUES ('r2', 'u1', $1)
-   ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data, updated_at = now()`,
-  [resumeV2]
+const r1msgs = await db.query(
+  `SELECT content FROM chat_messages WHERE resume_id = 'r1' ORDER BY created_at`
 );
-const { rows } = await db.query(`SELECT id, data FROM resumes WHERE user_id = 'u1'`);
-check("upsert: 사용자당 1행 유지", rows.length === 1);
-check("upsert: 데이터가 최신본으로 갱신", rows[0].data.version === 2);
-check("upsert: 기존 행 id 유지(교체 아님)", rows[0].id === "r1");
+check("대화: 이력서별 분리 + 시간순", r1msgs.rows.length === 2 && r1msgs.rows[0].content === "안녕");
 
-// 3) FK cascade — 사용자 삭제 시 이력서/세션도 정리
-await db.query(
-  `INSERT INTO sessions (session_token, user_id, expires) VALUES ('s1', 'u1', now() + interval '1 day')`
-);
+// 4) 이력서 삭제 → 그 이력서의 대화만 cascade 삭제 (다른 이력서는 유지)
+await db.query(`DELETE FROM resumes WHERE id = 'r1'`);
+const afterDel = await db.query(`SELECT count(*)::int AS c FROM chat_messages WHERE resume_id = 'r1'`);
+const r2still = await db.query(`SELECT count(*)::int AS c FROM chat_messages WHERE resume_id = 'r2'`);
+check("cascade: 이력서 삭제 시 해당 대화만 삭제", afterDel.rows[0].c === 0);
+check("cascade: 다른 이력서 대화는 유지", r2still.rows[0].c === 1);
+
+// 5) 사용자 삭제 → 모든 이력서 + 대화 cascade
 await db.query(`DELETE FROM users WHERE id = 'u1'`);
-const r2 = await db.query(`SELECT count(*)::int AS c FROM resumes`);
-const s2 = await db.query(`SELECT count(*)::int AS c FROM sessions`);
-check("cascade: 사용자 삭제 시 이력서 삭제", r2.rows[0].c === 0);
-check("cascade: 사용자 삭제 시 세션 삭제", s2.rows[0].c === 0);
+const resumesLeft = await db.query(`SELECT count(*)::int AS c FROM resumes`);
+const msgsLeft = await db.query(`SELECT count(*)::int AS c FROM chat_messages`);
+check("cascade: 사용자 삭제 시 이력서 전부 삭제", resumesLeft.rows[0].c === 0);
+check("cascade: 사용자 삭제 시 대화 전부 삭제", msgsLeft.rows[0].c === 0);
 
 console.log(failed === 0 ? "\n✅ DB 스키마 검증 통과" : `\n❌ ${failed}건 실패`);
 process.exit(failed === 0 ? 0 : 1);
