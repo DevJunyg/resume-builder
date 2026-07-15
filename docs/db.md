@@ -5,6 +5,7 @@
 
 > 이 문서는 **1단계**(Vercel 런타임 + RDS public) 기준이다.
 > 프라이빗 RDS + ECS + HTTPS로 승격하는 **2단계 계획은 `docs/db-stage2-ecs.md`** 참고.
+> RDS 대신 **EC2에 PostgreSQL을 직접 구축·이전**하는 실습은 **`docs/db-ec2.md`** 참고.
 
 ## 구성
 
