@@ -5,6 +5,7 @@ import { useResumeStore } from "@/stores/resume-store";
 import { useUiStore } from "@/stores/ui-store";
 import { useDiffStore } from "@/stores/diff-store";
 import { TextRewriteMenu } from "./TextRewriteMenu";
+import { EditableText } from "./EditableText";
 import {
   DndContext,
   closestCenter,
@@ -109,71 +110,43 @@ function SectionHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
-// 기본 정보 섹션
+// 기본 정보 섹션 (클릭해서 직접 편집)
 function PersonalInfoSection() {
   const { personalInfo } = useResumeStore((s) => s.resume);
+  const updatePersonalInfo = useResumeStore((s) => s.updatePersonalInfo);
   const { diffs } = useDiffStore();
   const phase = diffs["personal-info"];
-  const hasInfo = personalInfo.name || personalInfo.email;
-
-  if (!hasInfo) {
-    return (
-      <div
-        className={`pb-6 ${phase ? "diff-new rounded-md" : ""}`}
-        style={{ borderBottom: `1px solid ${RESUME_COLORS.divider}` }}
-      >
-        <EmptySection label="기본 정보" />
-      </div>
-    );
-  }
 
   return (
     <div
       className={`pb-6 ${phase ? "diff-new rounded-md" : ""}`}
       style={{ borderBottom: `1px solid ${RESUME_COLORS.divider}` }}
     >
-      {personalInfo.name && (
-        <h1 className="text-[26px] font-extrabold tracking-[-0.03em]" style={{ color: RESUME_COLORS.name }}>
-          {personalInfo.name}
-        </h1>
-      )}
+      <h1 className="text-[26px] font-extrabold tracking-[-0.03em]" style={{ color: RESUME_COLORS.name }}>
+        <EditableText
+          value={personalInfo.name}
+          onCommit={(v) => updatePersonalInfo({ name: v })}
+          ariaLabel="이름"
+          placeholder="이름"
+          className="text-[26px] font-extrabold tracking-[-0.03em]"
+        />
+      </h1>
       <div
-        className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-[12px]"
+        className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px]"
         style={{ color: RESUME_COLORS.contact }}
       >
-        {personalInfo.email && <span>{personalInfo.email}</span>}
-        {personalInfo.phone && <span>{personalInfo.phone}</span>}
-        {personalInfo.location && <span>{personalInfo.location}</span>}
-        {personalInfo.website && (
-          <a
-            href={personalInfo.website}
-            className="hover:underline"
-            style={{ color: RESUME_COLORS.sectionTitle }}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {personalInfo.website}
-          </a>
-        )}
+        <EditableText value={personalInfo.email} onCommit={(v) => updatePersonalInfo({ email: v })} ariaLabel="이메일" placeholder="이메일" />
+        <EditableText value={personalInfo.phone ?? ""} onCommit={(v) => updatePersonalInfo({ phone: v })} ariaLabel="전화번호" placeholder="전화번호" />
+        <EditableText value={personalInfo.location ?? ""} onCommit={(v) => updatePersonalInfo({ location: v })} ariaLabel="위치" placeholder="위치" />
+        <EditableText value={personalInfo.website ?? ""} onCommit={(v) => updatePersonalInfo({ website: v })} ariaLabel="웹사이트" placeholder="웹사이트" />
+        {/* LinkedIn/GitHub는 값이 있을 때 링크로 표시 (URL 편집은 채팅/추후 지원) */}
         {personalInfo.linkedin && (
-          <a
-            href={personalInfo.linkedin}
-            className="hover:underline"
-            style={{ color: RESUME_COLORS.sectionTitle }}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href={personalInfo.linkedin} className="hover:underline" style={{ color: RESUME_COLORS.sectionTitle }} target="_blank" rel="noopener noreferrer">
             LinkedIn
           </a>
         )}
         {personalInfo.github && (
-          <a
-            href={personalInfo.github}
-            className="hover:underline"
-            style={{ color: RESUME_COLORS.sectionTitle }}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href={personalInfo.github} className="hover:underline" style={{ color: RESUME_COLORS.sectionTitle }} target="_blank" rel="noopener noreferrer">
             GitHub
           </a>
         )}
@@ -182,22 +155,26 @@ function PersonalInfoSection() {
   );
 }
 
-// 간략 소개 섹션
+// 간략 소개 섹션 (클릭해서 직접 편집)
 function BriefIntroSection() {
   const { briefIntro } = useResumeStore((s) => s.resume);
+  const updateBriefIntro = useResumeStore((s) => s.updateBriefIntro);
   const { diffs } = useDiffStore();
   const phase = diffs["brief-intro"];
 
   return (
     <section aria-label="간략 소개" className={phase ? "diff-new rounded-md" : ""}>
       <SectionHeading>간략 소개</SectionHeading>
-      {briefIntro?.text ? (
-        <p className="text-[13px] leading-[1.75]" style={{ color: RESUME_COLORS.body }}>
-          {briefIntro.text}
-        </p>
-      ) : (
-        <EmptySection label="간략 소개" />
-      )}
+      <p className="text-[13px] leading-[1.75]" style={{ color: RESUME_COLORS.body }}>
+        <EditableText
+          value={briefIntro?.text ?? ""}
+          onCommit={(v) => updateBriefIntro(v, false)}
+          ariaLabel="간략 소개"
+          placeholder="간단한 자기소개를 입력하세요"
+          multiline
+          className="text-[13px] leading-[1.75]"
+        />
+      </p>
     </section>
   );
 }
@@ -236,8 +213,9 @@ function CoreCompetenciesSection() {
 }
 
 // 경력 WorkItem 단일 렌더
-function WorkItemEntry({ item }: { item: WorkItem }) {
+function WorkItemEntry({ item, experienceId }: { item: WorkItem; experienceId: string }) {
   const isJdMatch = item.isJdHighlighted;
+  const updateHighlight = useResumeStore((s) => s.updateHighlight);
 
   return (
     <div
@@ -275,7 +253,13 @@ function WorkItemEntry({ item }: { item: WorkItem }) {
         <ul className="ml-4 flex list-disc flex-col gap-1">
           {item.highlights.map((h) => (
             <li key={h.id} className="text-[13px]" style={{ color: RESUME_COLORS.body }}>
-              {h.formatted || h.raw}
+              <EditableText
+                value={h.formatted || h.raw}
+                onCommit={(v) => updateHighlight(experienceId, item.id, h.id, v)}
+                ariaLabel="경력 성과 항목"
+                multiline
+                className="text-[13px]"
+              />
             </li>
           ))}
         </ul>
@@ -305,6 +289,7 @@ function WorkItemEntry({ item }: { item: WorkItem }) {
 function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
   const isJdMatch = entry.isJdHighlighted;
   const deleteExperience = useResumeStore((s) => s.deleteExperience);
+  const updateExperience = useResumeStore((s) => s.updateExperience);
 
   return (
     <div
@@ -323,7 +308,13 @@ function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
       <div className="flex items-start justify-between">
         <div>
           <span className="text-[13px] font-semibold" style={{ color: RESUME_COLORS.body }}>
-            {entry.company}
+            <EditableText
+              value={entry.company}
+              onCommit={(v) => updateExperience(entry.id, { company: v })}
+              ariaLabel="회사명"
+              placeholder="회사명"
+              className="text-[13px] font-semibold"
+            />
           </span>
           {entry.department && (
             <span className="ml-2 text-[12px]" style={{ color: RESUME_COLORS.subtitle }}>
@@ -331,13 +322,32 @@ function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
             </span>
           )}
           <div className="text-[12px]" style={{ color: RESUME_COLORS.subtitle }}>
-            {entry.role}
+            <EditableText
+              value={entry.role}
+              onCommit={(v) => updateExperience(entry.id, { role: v })}
+              ariaLabel="직무"
+              placeholder="직무"
+              className="text-[12px]"
+            />
           </div>
         </div>
         <div className="flex items-start gap-1.5">
           <div className="text-right text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
-            <div>
-              {entry.startDate} ~ {entry.endDate ?? "현재"}
+            <div className="flex items-center justify-end gap-1">
+              <EditableText
+                value={entry.startDate}
+                onCommit={(v) => updateExperience(entry.id, { startDate: v })}
+                ariaLabel="입사 시기"
+                placeholder="YYYY-MM"
+                className="text-[11px]"
+              />
+              <span>~</span>
+              <EditableText
+                value={entry.endDate ?? "현재"}
+                onCommit={(v) => updateExperience(entry.id, { endDate: v })}
+                ariaLabel="퇴사 시기 (비우면 현재)"
+                className="text-[11px]"
+              />
             </div>
             {entry.location && <div>{entry.location}</div>}
           </div>
@@ -363,7 +373,7 @@ function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
           style={{ borderColor: RESUME_COLORS.timelineBorder }}
         >
           {entry.workItems.map((item) => (
-            <WorkItemEntry key={item.id} item={item} />
+            <WorkItemEntry key={item.id} item={item} experienceId={entry.id} />
           ))}
         </div>
       )}
@@ -636,21 +646,34 @@ export function ResumePreview() {
       style={{ background: "#e8e8f0" }}
       aria-label="이력서 미리보기"
     >
-      {/* 컨텍스트 메뉴: 이력서 카드 내 텍스트 선택 시 */}
+      {/* 컨텍스트 메뉴: 이력서 카드 내 텍스트 선택 → AI 재작성 → 스토어에 반영 */}
       <TextRewriteMenu
         containerRef={resumeCardRef}
-        onRewrite={(_original, rewritten, range) => {
-          // 선택 범위의 텍스트를 재작성된 내용으로 교체
-          const selection = window.getSelection();
-          if (!selection) return;
-          selection.removeAllRanges();
-          selection.addRange(range);
-          const sel = window.getSelection();
-          if (!sel || sel.rangeCount === 0) return;
-          const r = sel.getRangeAt(0);
-          r.deleteContents();
-          r.insertNode(document.createTextNode(rewritten));
-          sel.removeAllRanges();
+        onRewrite={(original, rewritten) => {
+          // 선택 텍스트가 속한 필드를 찾아 스토어를 갱신한다(DOM 직접 수정 X → 새로고침/DB에도 보존).
+          const orig = original.trim();
+          const next = rewritten.trim();
+          if (!orig || !next) return;
+          const state = useResumeStore.getState();
+
+          // 1) 자기소개
+          const intro = state.resume.briefIntro?.text ?? "";
+          if (intro.includes(orig)) {
+            state.updateBriefIntro(intro.replace(orig, next), false);
+            return;
+          }
+          // 2) 경력 성과(하이라이트)
+          for (const exp of state.resume.experience) {
+            for (const wi of exp.workItems) {
+              const h = wi.highlights.find((x) => (x.formatted || x.raw).includes(orig));
+              if (h) {
+                const cur = h.formatted || h.raw;
+                state.updateHighlight(exp.id, wi.id, h.id, cur.replace(orig, next));
+                return;
+              }
+            }
+          }
+          // 매칭 실패: 선택 텍스트를 특정 필드로 확정할 수 없어 무시(직접 편집을 권장)
         }}
       />
 

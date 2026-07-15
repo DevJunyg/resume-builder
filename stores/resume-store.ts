@@ -69,9 +69,11 @@ interface ResumeState {
   updateSkills: (skills: Skills) => void;
   addEducation: (entry: AddEducationInput) => void;
   updateExperience: (experienceId: string, fields: Partial<Omit<ExperienceEntry, "id" | "workItems" | "isJdHighlighted">>) => void;
+  updateHighlight: (experienceId: string, workItemId: string, highlightId: string, text: string) => void;
   deleteExperience: (experienceId: string) => void;
   deleteEducation: (educationId: string) => void;
   clearResume: () => void;
+  resetLocal: () => void;
   reorderSections: (fromIndex: number, toIndex: number) => void;
   markClean: () => void;
 }
@@ -200,6 +202,17 @@ export const useResumeStore = create<ResumeState>()(
             if (endDate !== undefined) exp.endDate = normalizeEndDate(endDate);
             state.isDirty = true;
           }),
+        updateHighlight: (experienceId, workItemId, highlightId, text) =>
+          set((state) => {
+            const exp = state.resume.experience.find((e) => e.id === experienceId);
+            const wi = exp?.workItems.find((w) => w.id === workItemId);
+            const h = wi?.highlights.find((x) => x.id === highlightId);
+            if (!h) return;
+            // 사용자가 직접 다듬은 문장 — raw/formatted 동일하게 반영
+            h.raw = text;
+            h.formatted = text;
+            state.isDirty = true;
+          }),
         deleteExperience: (experienceId) =>
           set((state) => {
             state.resume.experience = state.resume.experience.filter(
@@ -219,6 +232,12 @@ export const useResumeStore = create<ResumeState>()(
             // 빈 이력서로 초기화 — undo(Ctrl+Z)로 복구 가능
             state.resume = createEmptyResume("default");
             state.isDirty = true;
+          }),
+        resetLocal: () =>
+          set((state) => {
+            // 로그아웃 등에서 로컬 잔존 데이터 제거 — dirty로 표시하지 않음(동기화 대상 아님)
+            state.resume = createEmptyResume("default");
+            state.isDirty = false;
           }),
         reorderSections: (fromIndex, toIndex) =>
           set((state) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
 import { LogIn, LogOut, Cloud, CloudOff, Loader2 } from "lucide-react";
 import type { CloudSyncStatus } from "@/lib/use-cloud-sync";
 
@@ -37,7 +37,13 @@ function SyncBadge({ status }: { status: CloudSyncStatus }) {
   );
 }
 
-export function UserMenu({ syncStatus }: { syncStatus: CloudSyncStatus }) {
+export function UserMenu({
+  syncStatus,
+  onLogout,
+}: {
+  syncStatus: CloudSyncStatus;
+  onLogout: () => void;
+}) {
   const { data: session, status } = useSession();
 
   if (status === "loading") return null;
@@ -64,7 +70,7 @@ export function UserMenu({ syncStatus }: { syncStatus: CloudSyncStatus }) {
       </span>
       <button
         type="button"
-        onClick={() => signOut()}
+        onClick={onLogout}
         className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
         aria-label="로그아웃"
         title="로그아웃"
