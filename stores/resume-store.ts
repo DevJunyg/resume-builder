@@ -75,11 +75,14 @@ interface ResumeState {
   updateEducation: (educationId: string, fields: Partial<Omit<Education, "id">>) => void;
   updateExperience: (experienceId: string, fields: Partial<Omit<ExperienceEntry, "id" | "workItems" | "isJdHighlighted">>) => void;
   updateHighlight: (experienceId: string, workItemId: string, highlightId: string, text: string) => void;
+  updateWorkItem: (experienceId: string, workItemId: string, fields: { title?: string; description?: string; role?: string }) => void;
   deleteExperience: (experienceId: string) => void;
   deleteEducation: (educationId: string) => void;
   clearResume: () => void;
   resetLocal: () => void;
   reorderSections: (fromIndex: number, toIndex: number) => void;
+  toggleSectionVisibility: (sectionId: string) => void;
+  moveSection: (sectionId: string, direction: "up" | "down") => void;
   markClean: () => void;
 }
 
@@ -255,6 +258,14 @@ export const useResumeStore = create<ResumeState>()(
             h.formatted = text;
             state.isDirty = true;
           }),
+        updateWorkItem: (experienceId, workItemId, fields) =>
+          set((state) => {
+            const exp = state.resume.experience.find((e) => e.id === experienceId);
+            const wi = exp?.workItems.find((w) => w.id === workItemId);
+            if (!wi) return;
+            Object.assign(wi, fields);
+            state.isDirty = true;
+          }),
         deleteExperience: (experienceId) =>
           set((state) => {
             state.resume.experience = state.resume.experience.filter(
@@ -290,6 +301,27 @@ export const useResumeStore = create<ResumeState>()(
             sections.forEach((s, i) => {
               s.order = i;
             });
+            state.isDirty = true;
+          }),
+        toggleSectionVisibility: (sectionId) =>
+          set((state) => {
+            const s = state.resume.sections.find((x) => x.id === sectionId);
+            if (!s) return;
+            s.isVisible = !s.isVisible;
+            state.isDirty = true;
+          }),
+        moveSection: (sectionId, direction) =>
+          set((state) => {
+            // order 기준 정렬 후 인접 섹션과 order 교환
+            const sorted = [...state.resume.sections].sort((a, b) => a.order - b.order);
+            const idx = sorted.findIndex((s) => s.id === sectionId);
+            const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+            if (idx === -1 || swapIdx < 0 || swapIdx >= sorted.length) return;
+            const a = sorted[idx];
+            const b = sorted[swapIdx];
+            const tmp = a.order;
+            a.order = b.order;
+            b.order = tmp;
             state.isDirty = true;
           }),
         markClean: () =>

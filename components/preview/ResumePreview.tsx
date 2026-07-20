@@ -169,17 +169,8 @@ function PersonalInfoSection() {
         <EditableText value={personalInfo.phone ?? ""} onCommit={(v) => updatePersonalInfo({ phone: v })} ariaLabel="전화번호" placeholder="전화번호" />
         <EditableText value={personalInfo.location ?? ""} onCommit={(v) => updatePersonalInfo({ location: v })} ariaLabel="위치" placeholder="위치" />
         <EditableText value={personalInfo.website ?? ""} onCommit={(v) => updatePersonalInfo({ website: v })} ariaLabel="웹사이트" placeholder="웹사이트" />
-        {/* LinkedIn/GitHub는 값이 있을 때 링크로 표시 (URL 편집은 채팅/추후 지원) */}
-        {personalInfo.linkedin && (
-          <a href={personalInfo.linkedin} className="hover:underline" style={{ color: RESUME_COLORS.sectionTitle }} target="_blank" rel="noopener noreferrer">
-            LinkedIn
-          </a>
-        )}
-        {personalInfo.github && (
-          <a href={personalInfo.github} className="hover:underline" style={{ color: RESUME_COLORS.sectionTitle }} target="_blank" rel="noopener noreferrer">
-            GitHub
-          </a>
-        )}
+        <EditableText value={personalInfo.linkedin ?? ""} onCommit={(v) => updatePersonalInfo({ linkedin: v })} ariaLabel="LinkedIn URL" placeholder="LinkedIn" />
+        <EditableText value={personalInfo.github ?? ""} onCommit={(v) => updatePersonalInfo({ github: v })} ariaLabel="GitHub URL" placeholder="GitHub" />
       </div>
     </div>
   );
@@ -261,6 +252,7 @@ function CoreCompetenciesSection() {
 function WorkItemEntry({ item, experienceId }: { item: WorkItem; experienceId: string }) {
   const isJdMatch = item.isJdHighlighted;
   const updateHighlight = useResumeStore((s) => s.updateHighlight);
+  const updateWorkItem = useResumeStore((s) => s.updateWorkItem);
 
   return (
     <div
@@ -278,7 +270,13 @@ function WorkItemEntry({ item, experienceId }: { item: WorkItem; experienceId: s
     >
       <div className="flex items-center justify-between">
         <span className="text-[13px] font-medium" style={{ color: RESUME_COLORS.body }}>
-          {item.title}
+          <EditableText
+            value={item.title}
+            onCommit={(v) => updateWorkItem(experienceId, item.id, { title: v })}
+            ariaLabel="업무명"
+            placeholder="업무명"
+            className="text-[13px] font-medium"
+          />
         </span>
         {(item.startDate || item.endDate !== undefined) && (
           <span className="text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
@@ -292,7 +290,14 @@ function WorkItemEntry({ item, experienceId }: { item: WorkItem; experienceId: s
         </span>
       )}
       <p className="text-[13px] leading-[1.75]" style={{ color: RESUME_COLORS.body }}>
-        {item.description}
+        <EditableText
+          value={item.description}
+          onCommit={(v) => updateWorkItem(experienceId, item.id, { description: v })}
+          ariaLabel="업무 개요"
+          placeholder="업무 개요를 입력하세요"
+          multiline
+          className="text-[13px] leading-[1.75]"
+        />
       </p>
       {item.highlights.length > 0 && (
         <ul className="ml-4 flex list-disc flex-col gap-1">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Search, FileDown, Clipboard, Check, RotateCcw } from "lucide-react";
+import { Search, FileDown, Clipboard, Check, RotateCcw, Eye, EyeOff, ChevronUp, ChevronDown } from "lucide-react";
 import { useResumeStore } from "@/stores/resume-store";
 import { resumeToMarkdown } from "@/lib/resume/to-markdown";
 import type { Tone } from "@/types/resume";
@@ -14,8 +14,10 @@ const TONE_OPTIONS: { value: Tone; label: string; description: string }[] = [
 ];
 
 export function ToolsPanel() {
-  const { resume, updateJdMetadata, updateTone, clearResume } = useResumeStore();
+  const { resume, updateJdMetadata, updateTone, clearResume, toggleSectionVisibility, moveSection } =
+    useResumeStore();
   const currentTone = resume.metadata.tone;
+  const orderedSections = [...resume.sections].sort((a, b) => a.order - b.order);
 
   const [jdInput, setJdInput] = useState("");
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -95,6 +97,65 @@ export function ToolsPanel() {
       </div>
 
       <div className="flex flex-col gap-5 p-5">
+        {/* 섹션 관리 — 표시 여부 / 순서 */}
+        <section aria-label="섹션 관리">
+          <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
+            섹션
+          </h3>
+          <ul className="flex flex-col gap-1">
+            {orderedSections.map((s, i) => (
+              <li
+                key={s.id}
+                className={`flex items-center gap-1 rounded-lg border border-border bg-surface px-2 py-1.5 ${
+                  s.isVisible ? "" : "opacity-50"
+                }`}
+              >
+                <span className="flex-1 truncate text-[12px] text-foreground">{s.title}</span>
+                <button
+                  type="button"
+                  onClick={() => moveSection(s.id, "up")}
+                  disabled={i === 0}
+                  aria-label={`${s.title} 위로`}
+                  title="위로"
+                  className="flex h-6 w-6 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronUp className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => moveSection(s.id, "down")}
+                  disabled={i === orderedSections.length - 1}
+                  aria-label={`${s.title} 아래로`}
+                  title="아래로"
+                  className="flex h-6 w-6 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-2 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
+                >
+                  <ChevronDown className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleSectionVisibility(s.id)}
+                  aria-label={s.isVisible ? `${s.title} 숨기기` : `${s.title} 표시`}
+                  aria-pressed={s.isVisible}
+                  title={s.isVisible ? "숨기기" : "표시"}
+                  className="flex h-6 w-6 items-center justify-center rounded text-text-muted transition-colors hover:bg-surface-2 hover:text-foreground"
+                >
+                  {s.isVisible ? (
+                    <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                  ) : (
+                    <EyeOff className="h-3.5 w-3.5" aria-hidden="true" />
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-1.5 text-[11px] leading-relaxed text-text-muted">
+            눈 아이콘으로 표시/숨김, 화살표로 순서를 바꿉니다.
+          </p>
+        </section>
+
+        {/* 구분선 */}
+        <div className="h-px bg-border" aria-hidden="true" />
+
         {/* JD 분석 */}
         <section aria-label="채용공고 분석">
           <h3 className="mb-2.5 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
