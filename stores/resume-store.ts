@@ -16,6 +16,8 @@ function normalizeEndDate(v: string | null | undefined): string | null {
     t === "재직중" ||
     t === "재직 중" ||
     t === "현재 재직 중" ||
+    t === "재학중" ||
+    t === "재학 중" ||
     t.toLowerCase() === "present"
   ) {
     return null;
@@ -65,9 +67,12 @@ interface ResumeState {
   updateJdMetadata: (jd: JdMetadata) => void;
   updateCoreCompetencies: (items: Array<CoreCompetency>) => void;
   addExperience: (entry: AddExperienceInput) => void;
+  addBlankExperience: () => void;
   updateExperienceHighlights: (experienceId: string, highlights: Array<StarHighlight>) => void;
   updateSkills: (skills: Skills) => void;
   addEducation: (entry: AddEducationInput) => void;
+  addBlankEducation: () => void;
+  updateEducation: (educationId: string, fields: Partial<Omit<Education, "id">>) => void;
   updateExperience: (experienceId: string, fields: Partial<Omit<ExperienceEntry, "id" | "workItems" | "isJdHighlighted">>) => void;
   updateHighlight: (experienceId: string, workItemId: string, highlightId: string, text: string) => void;
   deleteExperience: (experienceId: string) => void;
@@ -147,6 +152,20 @@ export const useResumeStore = create<ResumeState>()(
             }
             state.isDirty = true;
           }),
+        addBlankExperience: () =>
+          set((state) => {
+            // 사용자가 직접 채울 빈 경력 항목을 맨 앞에 추가
+            state.resume.experience.unshift({
+              id: crypto.randomUUID(),
+              company: "",
+              role: "",
+              startDate: "",
+              endDate: null,
+              workItems: [],
+              isJdHighlighted: false,
+            });
+            state.isDirty = true;
+          }),
         updateExperienceHighlights: (experienceId, highlights) =>
           set((state) => {
             const exp = state.resume.experience.find((e) => e.id === experienceId);
@@ -190,6 +209,29 @@ export const useResumeStore = create<ResumeState>()(
             } else {
               state.resume.education.push(newEntry);
             }
+            state.isDirty = true;
+          }),
+        addBlankEducation: () =>
+          set((state) => {
+            // 사용자가 직접 채울 빈 학력 항목 추가
+            state.resume.education.push({
+              id: crypto.randomUUID(),
+              institution: "",
+              degree: "",
+              field: "",
+              startDate: "",
+              endDate: null,
+              achievements: [],
+            });
+            state.isDirty = true;
+          }),
+        updateEducation: (educationId, fields) =>
+          set((state) => {
+            const edu = state.resume.education.find((e) => e.id === educationId);
+            if (!edu) return;
+            const { endDate, ...rest } = fields;
+            Object.assign(edu, rest);
+            if (endDate !== undefined) edu.endDate = normalizeEndDate(endDate);
             state.isDirty = true;
           }),
         updateExperience: (experienceId, fields) =>

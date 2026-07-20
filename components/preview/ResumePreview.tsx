@@ -22,7 +22,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Trash2 } from "lucide-react";
+import { GripVertical, Trash2, Plus, X } from "lucide-react";
 import type { ExperienceEntry, Education, WorkItem, ResumeSection, SectionType } from "@/types/resume";
 
 // 이력서 카드 내부는 항상 흰색 배경 — 고정 색상 사용 (테마 무관)
@@ -92,6 +92,36 @@ function EmptySection({ label }: { label: string }) {
     >
       {label} 정보가 없습니다.
     </div>
+  );
+}
+
+// "추가" 버튼 — 인쇄에서는 숨김 (편집 전용 UI)
+function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="print-hide mt-2 inline-flex items-center gap-1 rounded-md border border-dashed px-2 py-1 text-[11px] transition-colors"
+      style={{ borderColor: RESUME_COLORS.emptyBorder, color: RESUME_COLORS.emptyText }}
+    >
+      <Plus className="h-3 w-3" aria-hidden="true" />
+      {label}
+    </button>
+  );
+}
+
+// 칩/항목 삭제용 작은 X — hover 시 노출, 인쇄 제외
+function ChipDelete({ onClick, label }: { onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+      className="print-hide ml-0.5 hidden h-3.5 w-3.5 items-center justify-center rounded-full text-[#c0c0d8] transition-colors hover:bg-red-50 hover:text-red-500 group-hover/chip:inline-flex"
+    >
+      <X className="h-2.5 w-2.5" aria-hidden="true" />
+    </button>
   );
 }
 
@@ -179,9 +209,10 @@ function BriefIntroSection() {
   );
 }
 
-// 핵심역량 섹션
+// 핵심역량 섹션 (칩 편집/추가/삭제)
 function CoreCompetenciesSection() {
   const { coreCompetencies } = useResumeStore((s) => s.resume);
+  const updateCoreCompetencies = useResumeStore((s) => s.updateCoreCompetencies);
   const { diffs } = useDiffStore();
   const phase = diffs["core-competencies"];
   const items = coreCompetencies?.items ?? [];
@@ -189,25 +220,39 @@ function CoreCompetenciesSection() {
   return (
     <section aria-label="핵심역량" className={phase ? "diff-new rounded-md" : ""}>
       <SectionHeading>핵심역량</SectionHeading>
-      {items.length > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {items.map((item) => (
-            <span
-              key={item.id}
-              className="rounded-full px-3 py-1 text-[12px] font-semibold"
-              style={{
-                background: RESUME_COLORS.skillBg,
-                border: `1px solid ${RESUME_COLORS.skillBorder}`,
-                color: RESUME_COLORS.skillText,
-              }}
-            >
-              {item.title}
-            </span>
-          ))}
-        </div>
-      ) : (
-        <EmptySection label="핵심역량" />
-      )}
+      <div className="flex flex-wrap items-center gap-2">
+        {items.map((item) => (
+          <span
+            key={item.id}
+            className="group/chip inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold"
+            style={{
+              background: RESUME_COLORS.skillBg,
+              border: `1px solid ${RESUME_COLORS.skillBorder}`,
+              color: RESUME_COLORS.skillText,
+            }}
+          >
+            <EditableText
+              value={item.title}
+              onCommit={(v) =>
+                updateCoreCompetencies(items.map((i) => (i.id === item.id ? { ...i, title: v } : i)))
+              }
+              ariaLabel="핵심역량"
+              placeholder="역량"
+              className="text-[12px] font-semibold"
+            />
+            <ChipDelete
+              label="역량 삭제"
+              onClick={() => updateCoreCompetencies(items.filter((i) => i.id !== item.id))}
+            />
+          </span>
+        ))}
+      </div>
+      <AddButton
+        label="역량 추가"
+        onClick={() =>
+          updateCoreCompetencies([...items, { id: crypto.randomUUID(), title: "" }])
+        }
+      />
     </section>
   );
 }
@@ -384,6 +429,7 @@ function ExperienceEntryItem({ entry }: { entry: ExperienceEntry }) {
 // 경력 섹션
 function ExperienceSection() {
   const { experience } = useResumeStore((s) => s.resume);
+  const addBlankExperience = useResumeStore((s) => s.addBlankExperience);
   const { diffs } = useDiffStore();
   const phase = diffs["experience"];
 
@@ -399,37 +445,69 @@ function ExperienceSection() {
       ) : (
         <EmptySection label="경력" />
       )}
+      <AddButton label="경력 추가" onClick={addBlankExperience} />
     </section>
   );
 }
 
-// 학력 단일 Entry 렌더
+// 학력 단일 Entry 렌더 (클릭 편집)
 function EducationEntryItem({ entry }: { entry: Education }) {
   const deleteEducation = useResumeStore((s) => s.deleteEducation);
+  const updateEducation = useResumeStore((s) => s.updateEducation);
 
   return (
     <div className="pdf-block group/entry flex items-start justify-between">
-      <div>
+      <div className="min-w-0">
         <span className="text-[13px] font-medium" style={{ color: RESUME_COLORS.body }}>
-          {entry.institution}
+          <EditableText
+            value={entry.institution}
+            onCommit={(v) => updateEducation(entry.id, { institution: v })}
+            ariaLabel="학교명"
+            placeholder="학교명"
+            className="text-[13px] font-medium"
+          />
         </span>
-        <div className="text-[12px]" style={{ color: RESUME_COLORS.subtitle }}>
-          {entry.degree} · {entry.field}
-          {entry.gpa && ` · GPA ${entry.gpa}`}
+        <div className="flex flex-wrap items-center gap-x-1 text-[12px]" style={{ color: RESUME_COLORS.subtitle }}>
+          <EditableText value={entry.degree} onCommit={(v) => updateEducation(entry.id, { degree: v })} ariaLabel="학위" placeholder="학위" className="text-[12px]" />
+          <span>·</span>
+          <EditableText value={entry.field} onCommit={(v) => updateEducation(entry.id, { field: v })} ariaLabel="전공" placeholder="전공" className="text-[12px]" />
+          <span>· GPA</span>
+          <EditableText value={entry.gpa ?? ""} onCommit={(v) => updateEducation(entry.id, { gpa: v })} ariaLabel="학점" placeholder="학점" className="text-[12px]" />
         </div>
-        {entry.achievements.length > 0 && (
-          <ul className="ml-3 mt-1 flex list-disc flex-col gap-0.5">
-            {entry.achievements.map((ach, i) => (
-              <li key={i} className="text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
-                {ach}
-              </li>
-            ))}
-          </ul>
-        )}
+        <ul className="ml-3 mt-1 flex list-disc flex-col gap-0.5">
+          {entry.achievements.map((ach, i) => (
+            <li key={i} className="group/chip text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
+              <EditableText
+                value={ach}
+                onCommit={(v) =>
+                  updateEducation(entry.id, {
+                    achievements: entry.achievements.map((a, j) => (j === i ? v : a)),
+                  })
+                }
+                ariaLabel="학력 상세"
+                className="text-[11px]"
+              />
+              <ChipDelete
+                label="항목 삭제"
+                onClick={() =>
+                  updateEducation(entry.id, {
+                    achievements: entry.achievements.filter((_, j) => j !== i),
+                  })
+                }
+              />
+            </li>
+          ))}
+        </ul>
+        <AddButton
+          label="상세 추가"
+          onClick={() => updateEducation(entry.id, { achievements: [...entry.achievements, ""] })}
+        />
       </div>
       <div className="flex items-start gap-1.5">
-        <div className="text-right text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
-          {entry.startDate} ~ {entry.endDate ?? "재학 중"}
+        <div className="flex items-center gap-1 text-right text-[11px]" style={{ color: RESUME_COLORS.subtitle }}>
+          <EditableText value={entry.startDate} onCommit={(v) => updateEducation(entry.id, { startDate: v })} ariaLabel="입학 시기" placeholder="YYYY-MM" className="text-[11px]" />
+          <span>~</span>
+          <EditableText value={entry.endDate ?? "재학 중"} onCommit={(v) => updateEducation(entry.id, { endDate: v })} ariaLabel="졸업 시기 (비우면 재학 중)" className="text-[11px]" />
         </div>
         <button
           type="button"
@@ -452,6 +530,7 @@ function EducationEntryItem({ entry }: { entry: Education }) {
 // 학력 섹션
 function EducationSection() {
   const { education } = useResumeStore((s) => s.resume);
+  const addBlankEducation = useResumeStore((s) => s.addBlankEducation);
 
   return (
     <section aria-label="학력">
@@ -465,94 +544,126 @@ function EducationSection() {
       ) : (
         <EmptySection label="학력" />
       )}
+      <AddButton label="학력 추가" onClick={addBlankEducation} />
     </section>
   );
 }
 
-// 기술 스택 섹션
+// 기술 칩 (편집/삭제)
+function SkillChip({ value, onCommit, onDelete }: { value: string; onCommit: (v: string) => void; onDelete: () => void }) {
+  return (
+    <span
+      className="group/chip inline-flex items-center rounded px-1.5 py-0.5 text-[12px] font-medium"
+      style={{ background: RESUME_COLORS.techBg, border: `1px solid ${RESUME_COLORS.techBorder}`, color: RESUME_COLORS.techText }}
+    >
+      <EditableText value={value} onCommit={onCommit} ariaLabel="기술" placeholder="기술" className="text-[12px] font-medium" />
+      <ChipDelete label="삭제" onClick={onDelete} />
+    </span>
+  );
+}
+
+// 카테고리 라벨 (편집)
+function CategoryLabel({ value, onCommit }: { value: string; onCommit: (v: string) => void }) {
+  return (
+    <span className="w-24 flex-shrink-0 text-[12px] font-medium" style={{ color: RESUME_COLORS.subtitle }}>
+      <EditableText value={value} onCommit={onCommit} ariaLabel="카테고리" placeholder="카테고리" className="text-[12px] font-medium" />
+    </span>
+  );
+}
+
+// 기술 스택 섹션 (인라인 편집/추가/삭제)
 function SkillsSection() {
   const { skills } = useResumeStore((s) => s.resume);
-  const hasSkills =
-    skills.technical.length > 0 ||
-    (skills.languages && skills.languages.length > 0) ||
-    (skills.certifications && skills.certifications.length > 0);
+  const updateSkills = useResumeStore((s) => s.updateSkills);
+  const languages = skills.languages ?? [];
+  const certifications = skills.certifications ?? [];
+
+  const setTechnical = (technical: typeof skills.technical) => updateSkills({ ...skills, technical });
+  const setLanguages = (langs: string[]) => updateSkills({ ...skills, languages: langs });
+  const setCertifications = (certs: string[]) => updateSkills({ ...skills, certifications: certs });
 
   return (
     <section aria-label="기술 스택">
       <SectionHeading>기술 스택</SectionHeading>
-      {hasSkills ? (
-        <div className="flex flex-col gap-3">
-          {skills.technical.map((group) => (
-            <div key={group.category} className="flex items-start gap-3">
-              <span
-                className="w-24 flex-shrink-0 text-[12px] font-medium"
-                style={{ color: RESUME_COLORS.subtitle }}
+      <div className="flex flex-col gap-3">
+        {skills.technical.map((group, gi) => (
+          <div key={gi} className="group/entry flex items-start gap-3">
+            <CategoryLabel
+              value={group.category}
+              onCommit={(v) => setTechnical(skills.technical.map((g, i) => (i === gi ? { ...g, category: v } : g)))}
+            />
+            <div className="flex flex-wrap items-center gap-1.5">
+              {group.items.map((item, ii) => (
+                <SkillChip
+                  key={ii}
+                  value={item}
+                  onCommit={(v) =>
+                    setTechnical(skills.technical.map((g, i) => (i === gi ? { ...g, items: g.items.map((it, j) => (j === ii ? v : it)) } : g)))
+                  }
+                  onDelete={() =>
+                    setTechnical(skills.technical.map((g, i) => (i === gi ? { ...g, items: g.items.filter((_, j) => j !== ii) } : g)))
+                  }
+                />
+              ))}
+              <button
+                type="button"
+                onClick={() => setTechnical(skills.technical.map((g, i) => (i === gi ? { ...g, items: [...g.items, ""] } : g)))}
+                className="print-hide inline-flex h-5 w-5 items-center justify-center rounded text-[#c0c0d8] hover:bg-[#eef2ff] hover:text-accent-brand"
+                aria-label="기술 추가"
+                title="기술 추가"
               >
-                {group.category}
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {group.items.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded px-1.5 py-0.5 text-[12px] font-medium"
-                    style={{
-                      background: RESUME_COLORS.techBg,
-                      border: `1px solid ${RESUME_COLORS.techBorder}`,
-                      color: RESUME_COLORS.techText,
-                    }}
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
+                <Plus className="h-3 w-3" aria-hidden="true" />
+              </button>
+              <ChipDelete label="카테고리 삭제" onClick={() => setTechnical(skills.technical.filter((_, i) => i !== gi))} />
             </div>
-          ))}
-          {skills.languages && skills.languages.length > 0 && (
-            <div className="flex items-start gap-3">
-              <span
-                className="w-24 flex-shrink-0 text-[12px] font-medium"
-                style={{ color: RESUME_COLORS.subtitle }}
-              >
-                어학
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                {skills.languages.map((lang) => (
-                  <span
-                    key={lang}
-                    className="rounded px-1.5 py-0.5 text-[12px] font-medium"
-                    style={{
-                      background: RESUME_COLORS.techBg,
-                      border: `1px solid ${RESUME_COLORS.techBorder}`,
-                      color: RESUME_COLORS.techText,
-                    }}
-                  >
-                    {lang}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-          {skills.certifications && skills.certifications.length > 0 && (
-            <div className="flex items-start gap-3">
-              <span
-                className="w-24 flex-shrink-0 text-[12px] font-medium"
-                style={{ color: RESUME_COLORS.subtitle }}
-              >
-                자격증
-              </span>
-              <div className="flex flex-col gap-1">
-                {skills.certifications.map((cert) => (
-                  <span key={cert} className="text-[13px]" style={{ color: RESUME_COLORS.body }}>
-                    {cert}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
+          </div>
+        ))}
+
+        {/* 어학 */}
+        <div className="flex items-start gap-3">
+          <span className="w-24 flex-shrink-0 text-[12px] font-medium" style={{ color: RESUME_COLORS.subtitle }}>어학</span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {languages.map((lang, i) => (
+              <SkillChip
+                key={i}
+                value={lang}
+                onCommit={(v) => setLanguages(languages.map((l, j) => (j === i ? v : l)))}
+                onDelete={() => setLanguages(languages.filter((_, j) => j !== i))}
+              />
+            ))}
+            <button
+              type="button"
+              onClick={() => setLanguages([...languages, ""])}
+              className="print-hide inline-flex h-5 w-5 items-center justify-center rounded text-[#c0c0d8] hover:bg-[#eef2ff] hover:text-accent-brand"
+              aria-label="어학 추가"
+              title="어학 추가"
+            >
+              <Plus className="h-3 w-3" aria-hidden="true" />
+            </button>
+          </div>
         </div>
-      ) : (
-        <EmptySection label="기술 스택" />
-      )}
+
+        {/* 자격증 */}
+        <div className="flex items-start gap-3">
+          <span className="w-24 flex-shrink-0 text-[12px] font-medium" style={{ color: RESUME_COLORS.subtitle }}>자격증</span>
+          <div className="flex flex-col gap-1">
+            {certifications.map((cert, i) => (
+              <span key={i} className="group/chip text-[13px]" style={{ color: RESUME_COLORS.body }}>
+                <EditableText
+                  value={cert}
+                  onCommit={(v) => setCertifications(certifications.map((c, j) => (j === i ? v : c)))}
+                  ariaLabel="자격증"
+                  placeholder="자격증"
+                  className="text-[13px]"
+                />
+                <ChipDelete label="자격증 삭제" onClick={() => setCertifications(certifications.filter((_, j) => j !== i))} />
+              </span>
+            ))}
+            <AddButton label="자격증 추가" onClick={() => setCertifications([...certifications, ""])} />
+          </div>
+        </div>
+      </div>
+      <AddButton label="카테고리 추가" onClick={() => setTechnical([...skills.technical, { category: "", items: [] }])} />
     </section>
   );
 }
