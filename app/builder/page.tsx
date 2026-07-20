@@ -109,7 +109,7 @@ export default function BuilderPage() {
             <div className="h-4 w-px bg-border" aria-hidden="true" />
             <ThemeToggle />
             <div className="h-4 w-px bg-border" aria-hidden="true" />
-            <UserMenu syncStatus={cloud.status} />
+            <UserMenu syncStatus={cloud.status} onLogout={cloud.logout} />
           </div>
         </div>
       </header>

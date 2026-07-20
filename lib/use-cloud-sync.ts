@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import { useResumeStore } from "@/stores/resume-store";
 import { useChatStore } from "@/stores/chat-store";
 import type { Resume } from "@/types/resume";
@@ -31,6 +31,7 @@ export interface CloudSync {
   duplicateResume: (id: string) => Promise<void>;
   deleteResume: (id: string) => Promise<void>;
   renameResume: (id: string, title: string) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const SAVE_DEBOUNCE_MS = 1500;
@@ -340,6 +341,24 @@ export function useCloudSync(): CloudSync {
     [applyRemote, resumes, setActive]
   );
 
+  // 로그아웃: 마지막 편집분을 저장한 뒤, 로컬 잔존 데이터를 지우고 로그아웃.
+  // (공용 PC에서 다음 사람에게 이력서가 남지 않도록 — 프라이버시)
+  const logout = useCallback(async () => {
+    try {
+      await flushPending(); // 진행 중이던 실제 편집분을 서버에 저장
+    } catch {
+      /* 저장 실패해도 로그아웃은 진행 */
+    }
+    // 이후 스토어 변경이 서버로 저장되지 않도록 차단
+    readyRef.current = false;
+    setActive(null);
+    setResumes([]);
+    useResumeStore.getState().resetLocal();
+    useResumeStore.persist.clearStorage();
+    useChatStore.getState().clearMessages();
+    await signOut();
+  }, [flushPending, setActive]);
+
   const renameResume = useCallback(async (id: string, title: string) => {
     const trimmed = title.trim();
     if (!trimmed) return;
@@ -365,5 +384,6 @@ export function useCloudSync(): CloudSync {
     duplicateResume,
     deleteResume,
     renameResume,
+    logout,
   };
 }

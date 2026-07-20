@@ -16,6 +16,8 @@ function normalizeEndDate(v: string | null | undefined): string | null {
     t === "재직중" ||
     t === "재직 중" ||
     t === "현재 재직 중" ||
+    t === "재학중" ||
+    t === "재학 중" ||
     t.toLowerCase() === "present"
   ) {
     return null;
@@ -65,14 +67,22 @@ interface ResumeState {
   updateJdMetadata: (jd: JdMetadata) => void;
   updateCoreCompetencies: (items: Array<CoreCompetency>) => void;
   addExperience: (entry: AddExperienceInput) => void;
+  addBlankExperience: () => void;
   updateExperienceHighlights: (experienceId: string, highlights: Array<StarHighlight>) => void;
   updateSkills: (skills: Skills) => void;
   addEducation: (entry: AddEducationInput) => void;
+  addBlankEducation: () => void;
+  updateEducation: (educationId: string, fields: Partial<Omit<Education, "id">>) => void;
   updateExperience: (experienceId: string, fields: Partial<Omit<ExperienceEntry, "id" | "workItems" | "isJdHighlighted">>) => void;
+  updateHighlight: (experienceId: string, workItemId: string, highlightId: string, text: string) => void;
+  updateWorkItem: (experienceId: string, workItemId: string, fields: { title?: string; description?: string; role?: string }) => void;
   deleteExperience: (experienceId: string) => void;
   deleteEducation: (educationId: string) => void;
   clearResume: () => void;
+  resetLocal: () => void;
   reorderSections: (fromIndex: number, toIndex: number) => void;
+  toggleSectionVisibility: (sectionId: string) => void;
+  moveSection: (sectionId: string, direction: "up" | "down") => void;
   markClean: () => void;
 }
 
@@ -145,6 +155,20 @@ export const useResumeStore = create<ResumeState>()(
             }
             state.isDirty = true;
           }),
+        addBlankExperience: () =>
+          set((state) => {
+            // 사용자가 직접 채울 빈 경력 항목을 맨 앞에 추가
+            state.resume.experience.unshift({
+              id: crypto.randomUUID(),
+              company: "",
+              role: "",
+              startDate: "",
+              endDate: null,
+              workItems: [],
+              isJdHighlighted: false,
+            });
+            state.isDirty = true;
+          }),
         updateExperienceHighlights: (experienceId, highlights) =>
           set((state) => {
             const exp = state.resume.experience.find((e) => e.id === experienceId);
@@ -190,6 +214,29 @@ export const useResumeStore = create<ResumeState>()(
             }
             state.isDirty = true;
           }),
+        addBlankEducation: () =>
+          set((state) => {
+            // 사용자가 직접 채울 빈 학력 항목 추가
+            state.resume.education.push({
+              id: crypto.randomUUID(),
+              institution: "",
+              degree: "",
+              field: "",
+              startDate: "",
+              endDate: null,
+              achievements: [],
+            });
+            state.isDirty = true;
+          }),
+        updateEducation: (educationId, fields) =>
+          set((state) => {
+            const edu = state.resume.education.find((e) => e.id === educationId);
+            if (!edu) return;
+            const { endDate, ...rest } = fields;
+            Object.assign(edu, rest);
+            if (endDate !== undefined) edu.endDate = normalizeEndDate(endDate);
+            state.isDirty = true;
+          }),
         updateExperience: (experienceId, fields) =>
           set((state) => {
             const exp = state.resume.experience.find((e) => e.id === experienceId);
@@ -198,6 +245,25 @@ export const useResumeStore = create<ResumeState>()(
             const { endDate, ...rest } = fields;
             Object.assign(exp, rest);
             if (endDate !== undefined) exp.endDate = normalizeEndDate(endDate);
+            state.isDirty = true;
+          }),
+        updateHighlight: (experienceId, workItemId, highlightId, text) =>
+          set((state) => {
+            const exp = state.resume.experience.find((e) => e.id === experienceId);
+            const wi = exp?.workItems.find((w) => w.id === workItemId);
+            const h = wi?.highlights.find((x) => x.id === highlightId);
+            if (!h) return;
+            // 사용자가 직접 다듬은 문장 — raw/formatted 동일하게 반영
+            h.raw = text;
+            h.formatted = text;
+            state.isDirty = true;
+          }),
+        updateWorkItem: (experienceId, workItemId, fields) =>
+          set((state) => {
+            const exp = state.resume.experience.find((e) => e.id === experienceId);
+            const wi = exp?.workItems.find((w) => w.id === workItemId);
+            if (!wi) return;
+            Object.assign(wi, fields);
             state.isDirty = true;
           }),
         deleteExperience: (experienceId) =>
@@ -220,6 +286,12 @@ export const useResumeStore = create<ResumeState>()(
             state.resume = createEmptyResume("default");
             state.isDirty = true;
           }),
+        resetLocal: () =>
+          set((state) => {
+            // 로그아웃 등에서 로컬 잔존 데이터 제거 — dirty로 표시하지 않음(동기화 대상 아님)
+            state.resume = createEmptyResume("default");
+            state.isDirty = false;
+          }),
         reorderSections: (fromIndex, toIndex) =>
           set((state) => {
             const sections = state.resume.sections;
@@ -229,6 +301,27 @@ export const useResumeStore = create<ResumeState>()(
             sections.forEach((s, i) => {
               s.order = i;
             });
+            state.isDirty = true;
+          }),
+        toggleSectionVisibility: (sectionId) =>
+          set((state) => {
+            const s = state.resume.sections.find((x) => x.id === sectionId);
+            if (!s) return;
+            s.isVisible = !s.isVisible;
+            state.isDirty = true;
+          }),
+        moveSection: (sectionId, direction) =>
+          set((state) => {
+            // order 기준 정렬 후 인접 섹션과 order 교환
+            const sorted = [...state.resume.sections].sort((a, b) => a.order - b.order);
+            const idx = sorted.findIndex((s) => s.id === sectionId);
+            const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+            if (idx === -1 || swapIdx < 0 || swapIdx >= sorted.length) return;
+            const a = sorted[idx];
+            const b = sorted[swapIdx];
+            const tmp = a.order;
+            a.order = b.order;
+            b.order = tmp;
             state.isDirty = true;
           }),
         markClean: () =>
