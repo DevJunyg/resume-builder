@@ -116,6 +116,20 @@ ENV
 > `AUTH_TRUST_HOST=true` 가 없으면 nginx 뒤에서 Auth.js가 호스트를 신뢰하지 않아 **로그인 콜백이 깨진다**.
 > Vercel에선 자동으로 처리되던 부분.
 
+**빌드 전 — 스왑 추가 (t3.micro 필수)**: RAM 1GB인 t3.micro는 `next build` 중 **OOM으로
+인스턴스가 뻗어 SSH까지 끊긴다**. 스왑 2GB를 먼저 만든다(한 번만 하면 됨).
+
+```bash
+sudo fallocate -l 2G /swapfile
+sudo chmod 600 /swapfile
+sudo mkswap /swapfile
+sudo swapon /swapfile
+echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab   # 재부팅 후 유지
+free -h    # Swap 2.0Gi 확인
+```
+> 이미 뻗었다면: 콘솔에서 **재부팅**(안 되면 중지→시작, EIP라 IP 유지) 후 위 스왑부터.
+> 대안: 빌드 동안만 t3.small로 인스턴스 타입 상향 후 원복.
+
 빌드:
 
 ```bash
