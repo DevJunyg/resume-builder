@@ -15,22 +15,59 @@ DB(5432)는 localhost로 닫아 **인터넷 노출을 없애는 것**이 이 구
 ## 전제
 
 - Ubuntu 24.04 EC2 + PostgreSQL 18 (`docs/db-ec2.md` 완료 상태)
-- 무료 도메인 A레코드가 EC2를 가리킴 — 예: `resumebuilder.kro.kr`
+- 무료 도메인 A레코드가 EC2를 가리킴 — 예: `myapp.r-e.kr` (내도메인.한국의 `kro.kr`/`r-e.kr` 등)
 - GitHub OAuth 앱 (콜백 URL을 새 도메인으로 바꿀 것)
 
-> ⚠️ **`kro.kr` HTTPS 주의**: `kro.kr`은 Public Suffix List에 없어, Let's Encrypt의 "등록 도메인당
-> 주 50장" 한도를 `kro.kr` 전체 사용자가 **공유**한다. certbot이 `too many certificates already
-> issued for: kro.kr`로 실패할 수 있다. 그 경우 §5-B의 **acme.sh + ZeroSSL**로 우회한다.
+> ⚠️ **공유 무료 도메인 HTTPS 주의**: `kro.kr`·`r-e.kr` 등은 Public Suffix List에 없어,
+> Let's Encrypt의 "등록 도메인당 주 50장" 한도를 그 도메인(`r-e.kr`) 전체 사용자가 **공유**한다.
+> certbot이 `too many certificates already issued for: r-e.kr`로 실패할 수 있고, 그 경우
+> §5-B의 **acme.sh + ZeroSSL**로 우회한다. (DuckDNS/deSEC는 PSL에 있어 이 문제가 없다.)
 
 ---
 
-## 0. 사전 — 고정 IP + 보안그룹 + A레코드
+## 0. 사전 — 고정 IP + 보안그룹 + A레코드 (AWS 콘솔)
 
-1. **탄력적 IP(Elastic IP) 할당 후 EC2에 연결.**
-   EIP가 없으면 EC2 중지/시작 시 퍼블릭 IP가 바뀌어 A레코드가 깨진다.
-2. 도메인 A레코드를 그 **EIP**로 맞춘다 (`nslookup resumebuilder.kro.kr` → EIP).
-3. 보안그룹 인바운드: **HTTP(80)**, **HTTPS(443)** 를 `0.0.0.0/0` 으로 연다.
-   (5432는 §7에서 제거한다. 22는 내 IP 유지.)
+> EC2를 **중지**만 했다면 EBS(디스크)는 유지돼 PostgreSQL 데이터·설정이 그대로 살아있다.
+> 다만 중지 시 기존 퍼블릭 IP는 사라지므로 EIP로 **고정 IP**를 붙인다.
+
+### 0-1. 인스턴스 시작
+EC2 콘솔 → **인스턴스** → 대상 인스턴스 선택 → **인스턴스 상태 → 인스턴스 시작** →
+상태 `실행 중` + 상태 검사 `2/2` 될 때까지 대기.
+
+### 0-2. 탄력적 IP(Elastic IP) 할당
+EC2 콘솔 좌측 → **네트워크 및 보안 → 탄력적 IP** → **탄력적 IP 주소 할당** →
+네트워크 경계 그룹은 리전 기본값(예: `ap-northeast-2`) → **할당**. 새 IP가 목록에 생긴다.
+
+### 0-3. 인스턴스에 연결(Associate)
+방금 만든 EIP 선택 → **작업 → 탄력적 IP 주소 연결** →
+- 리소스 유형: **인스턴스**
+- 인스턴스: 대상 인스턴스 선택 / 프라이빗 IP: 비워두면 자동
+- **연결**
+
+이 EIP가 인스턴스의 고정 퍼블릭 IP가 된다. 메모해 둔다.
+
+> 💸 AWS는 사용 중인 퍼블릭 IPv4에 소액 과금(~$0.005/시간, 월 $3~4)이 있다. 실습이 끝나면
+> **EIP 연결 해제 → 릴리스**로 정리한다. (연결 안 된 채 방치하는 EIP가 오히려 더 비싸다.)
+
+### 0-4. 보안그룹 인바운드 — HTTP/HTTPS 열기
+인스턴스 → **보안** 탭 → 보안그룹 → **인바운드 규칙 편집** → 규칙 추가:
+- **HTTP(80)** — 소스 `0.0.0.0/0`
+- **HTTPS(443)** — 소스 `0.0.0.0/0`
+
+(SSH(22)는 내 IP 유지. 5432는 지금 그대로 두고 §7에서 제거.)
+
+### 0-5. A레코드 → EIP (도메인 관리 콘솔)
+내도메인.한국 → 도메인 관리 → 대상 도메인 → **고급설정(DNS)**:
+- **IP연결(A)** 체크박스 체크
+- 값 칸에 **EIP** 입력 (앞쪽 서브도메인 칸은 비워두면 도메인 자체에 연결)
+- **보안코드** 입력 후 **수정하기**
+
+### 0-6. 확인
+```bash
+nslookup myapp.r-e.kr        # → EIP 가 나오면 DNS 연결 완료 (전파 5~10분)
+ssh -i ~/.ssh/키.pem ubuntu@<EIP>   # 고정 IP로 접속
+```
+> SSH가 timeout이면 내 PC 공인 IP가 바뀐 것 — SG의 SSH(22) "내 IP"를 갱신한다.
 
 ---
 
@@ -59,7 +96,7 @@ npm ci
 ```bash
 cat > .env.production <<'ENV'
 # 앱 URL — NEXT_PUBLIC_* 는 빌드 시점에 코드에 박히므로 build 전에 있어야 함
-NEXT_PUBLIC_APP_URL=https://resumebuilder.kro.kr
+NEXT_PUBLIC_APP_URL=https://myapp.r-e.kr
 
 # Claude API
 ANTHROPIC_API_KEY=sk-ant-...
@@ -69,7 +106,7 @@ DATABASE_URL=postgresql://appuser:비번@localhost:5432/resumebuilder
 
 # Auth.js (GitHub) — 리버스 프록시 뒤이므로 TRUST_HOST 필수
 AUTH_SECRET=...            # npx auth secret 로 생성
-AUTH_URL=https://resumebuilder.kro.kr
+AUTH_URL=https://myapp.r-e.kr
 AUTH_TRUST_HOST=true
 AUTH_GITHUB_ID=...
 AUTH_GITHUB_SECRET=...
@@ -127,7 +164,7 @@ sudo apt install -y nginx
 sudo tee /etc/nginx/sites-available/resume > /dev/null <<'EOF'
 server {
     listen 80;
-    server_name resumebuilder.kro.kr;
+    server_name myapp.r-e.kr;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -148,7 +185,7 @@ sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-이제 `http://resumebuilder.kro.kr` 로 앱이 떠야 한다(HTTP).
+이제 `http://myapp.r-e.kr` 로 앱이 떠야 한다(HTTP).
 
 ---
 
@@ -158,11 +195,11 @@ sudo nginx -t && sudo systemctl reload nginx
 
 ```bash
 sudo apt install -y certbot python3-certbot-nginx
-sudo certbot --nginx -d resumebuilder.kro.kr --redirect -m 내이메일@example.com --agree-tos --no-eff-email
+sudo certbot --nginx -d myapp.r-e.kr --redirect -m 내이메일@example.com --agree-tos --no-eff-email
 ```
 
 성공하면 nginx에 443 블록과 HTTP→HTTPS 리다이렉트가 자동 추가되고, 인증서는 자동 갱신된다.
-`https://resumebuilder.kro.kr` 확인.
+`https://myapp.r-e.kr` 확인.
 
 ### 5-B. 실패 시 (`too many certificates ... kro.kr`) — acme.sh + ZeroSSL
 
@@ -173,10 +210,10 @@ curl https://get.acme.sh | sh -s email=내이메일@example.com
 source ~/.bashrc
 # ZeroSSL이 acme.sh 기본 CA. webroot(HTTP-01)로 발급
 sudo mkdir -p /var/www/html
-~/.acme.sh/acme.sh --issue -d resumebuilder.kro.kr -w /var/www/html
+~/.acme.sh/acme.sh --issue -d myapp.r-e.kr -w /var/www/html
 # nginx에 설치 + 재로드 훅
 sudo mkdir -p /etc/nginx/ssl
-~/.acme.sh/acme.sh --install-cert -d resumebuilder.kro.kr \
+~/.acme.sh/acme.sh --install-cert -d myapp.r-e.kr \
   --key-file /etc/nginx/ssl/resume.key \
   --fullchain-file /etc/nginx/ssl/resume.crt \
   --reloadcmd "sudo systemctl reload nginx"
@@ -190,8 +227,8 @@ sudo mkdir -p /etc/nginx/ssl
 ## 6. GitHub OAuth 콜백 + 재시작
 
 1. GitHub → OAuth App 설정:
-   - Homepage URL: `https://resumebuilder.kro.kr`
-   - Authorization callback URL: `https://resumebuilder.kro.kr/api/auth/callback/github`
+   - Homepage URL: `https://myapp.r-e.kr`
+   - Authorization callback URL: `https://myapp.r-e.kr/api/auth/callback/github`
 2. `.env.production`의 `AUTH_URL`/`NEXT_PUBLIC_APP_URL`이 새 도메인인지 확인
 3. `sudo systemctl restart resume`
 
@@ -218,7 +255,7 @@ sudo ss -tlnp | grep 5432     # 127.0.0.1:5432 만 보여야 함
 
 ## 8. 검증 & 운영
 
-- `https://resumebuilder.kro.kr` 접속 → 이력서 편집 → GitHub 로그인 → 저장 확인
+- `https://myapp.r-e.kr` 접속 → 이력서 편집 → GitHub 로그인 → 저장 확인
 - 자물쇠(HTTPS) 정상, 채팅 스트리밍 동작 확인
 - 인증서 자동 갱신: certbot은 systemd timer로, acme.sh는 cron으로 자동
 - 앱 로그: `journalctl -u resume -f` / nginx: `/var/log/nginx/`
